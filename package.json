@@ -8,7 +8,7 @@
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",
     "doc": "jsdoc -c jsdoc.json",
     "lint": "standard --fix",
-    "antlr": "grammar\\generate_parser.bat"
+    "antlr": "src\\asm\\grammar\\generate_parser.bat"
   },
   "keywords": [],
   "author": "",

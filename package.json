@@ -1,0 +1,36 @@
+{
+  "name": "biesvm",
+  "version": "1.0.0",
+  "description": "Bies virtual machine",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",
+    "doc": "jsdoc -c jsdoc.json",
+    "lint": "standard --fix",
+    "antlr": "grammar\\generate_parser.bat"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "antlr4": "^4.13.2",
+    "cross-env": "^7.0.3",
+    "jest": "^29.7.0",
+    "jsdoc": "^4.0.3",
+    "standard": "^17.1.0"
+  },
+  "eslintConfig": {
+    "extends": "./node_modules/standard/eslintrc.json",
+    "rules": {
+      "import/no-absolute-path": "off"
+    },
+    "env": {
+      "jest": true
+    }
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {}
+  }
+}

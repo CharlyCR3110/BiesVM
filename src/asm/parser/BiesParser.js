@@ -1,6 +1,6 @@
 import antlr4 from 'antlr4'
-import BiesVMLexer from './grammar/.antlr/BiesVMLexer.js'
-import BiesVMParser from './grammar/.antlr/BiesVMParser.js'
+import BiesVMLexer from '../grammar/.antlr/BiesVMLexer.js'
+import BiesVMParser from '../grammar/.antlr/BiesVMParser.js'
 
 /**
  * Parses the input code.

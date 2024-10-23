@@ -1,4 +1,4 @@
-import BiesVMVisitor from './grammar/.antlr/BiesVMVisitor.js'
+import BiesVMVisitor from '../grammar/.antlr/BiesVMVisitor.js'
 
 export class TreePrintVisitor extends BiesVMVisitor {
   // Programa (root node)

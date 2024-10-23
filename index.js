@@ -1,6 +1,5 @@
-import { parse } from './src/asm/biesParser.js'
-import { TreePrintVisitor } from './src/asm/TreePrintVisitor.js'
-
+import { parse } from './src/asm/parser/BiesParser.js'
+import { TreePrintVisitor } from './src/asm/parser/TreePrintVisitor.js'
 // test code
 
 const input = `

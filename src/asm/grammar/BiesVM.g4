@@ -1,13 +1,15 @@
-grammar BiesVM; // generada por ChatGPT
+grammar BiesVM;
 
-// Programa
-program: statement* EOF;
+// Programa principal
+program
+    : (statement | expression)* EOF
+    ;
 
-// Instrucciones o declaraciones
+// Declaraciones e instrucciones
 statement
-    : letDeclaration        // Declaraciones let/var
-    | funDeclaration        // Declaraciones de funciones
-    | expressionStatement   // Expresiones
+    : letDeclaration               // Declaraciones de variables let/var
+    | funDeclaration               // Declaraciones de funciones
+    | expressionStatement          // Expresiones
     ;
 
 // Declaraciones de let/var
@@ -21,8 +23,9 @@ variableDeclarationBlock
     ;
 
 variableDeclaration
-    : CONST IDENTIFIER '=' expression       // Constantes
-    | VAR IDENTIFIER '=' expression         // Variables
+    : CONST IDENTIFIER '=' expression     // Constantes
+    | VAR IDENTIFIER '=' expression       // Variables
+    | IDENTIFIER '=' expression
     ;
 
 // Declaraciones de funciones
@@ -44,11 +47,18 @@ expression
     | logicalOrExpression                  // Expresiones lógicas
     ;
 
+// Expresiones condicionales if-then-else
+conditionalExpression
+    : 'if' expression 'then' expression 'else' expression
+    ;
+
+// Expresiones de asignación
 assignmentExpression
-    : IDENTIFIER '=' expression            // Asignación de valor
+    : IDENTIFIER '=' expression
     | logicalOrExpression
     ;
 
+// Expresiones lógicas
 logicalOrExpression
     : logicalAndExpression ('||' logicalAndExpression)*
     ;
@@ -61,24 +71,28 @@ equalityExpression
     : relationalExpression (('==' | '!=') relationalExpression)*
     ;
 
+// Expresiones relacionales
 relationalExpression
     : additiveExpression (('>' | '>=' | '<' | '<=') additiveExpression)*
     ;
 
+// Expresiones aditivas
 additiveExpression
     : multiplicativeExpression (('+' | '-') multiplicativeExpression)*
     ;
 
+// Expresiones multiplicativas
 multiplicativeExpression
     : unaryExpression (('*' | '/' | '**') unaryExpression)*
     ;
 
+// Expresiones unarias
 unaryExpression
     : ('!' | '-' | '+') unaryExpression
     | primaryExpression
     ;
 
-// Expresiones primarias (números, hileras, llamadas a funciones, listas, lambdas)
+// Expresiones primarias (números, cadenas, llamadas a funciones, listas, lambdas, condicionales)
 primaryExpression
     : NUMBER
     | STRING
@@ -86,7 +100,7 @@ primaryExpression
     | IDENTIFIER                          // Identificadores (variables o funciones)
     | lambdaExpression                    // Lambdas
     | listExpression                      // Listas
-    | '(' expression ')'                  // Subexpresiones
+    | conditionalExpression               // Condicionales
     | functionCall                        // Llamadas a funciones
     ;
 
@@ -113,9 +127,9 @@ argumentList
     : expression (',' expression)*
     ;
 
-// Bloques de expresiones (secuencia de expresiones)
+// Bloques de expresiones (secuencia de expresiones y declaraciones)
 expressionBlock
-    : '{' expression* '}'
+    : '{' (statement | expression)* '}'
     ;
 
 // Tokens
@@ -130,7 +144,20 @@ NUMBER: [0-9]+;
 STRING: '"' .*? '"';
 BOOLEAN: TRUE | FALSE;
 
+// Palabras clave de funciones predefinidas
+PRINT: 'print';
+INPUT: 'input';
+INT: 'int';
+STR: 'str';
+BOOL: 'bool';
+LIST: 'list';
+LEN: 'len';
+
 IDENTIFIER: [a-zA-Z_][a-zA-Z0-9_]*;
 
+// Comentarios
 COMMENT: '//' ~[\r\n]* -> skip;
+COMMENT_BLOCK: '/*' .*? '*/' -> skip;
+
+// Espacios en blanco
 WHITESPACE: [ \t\r\n]+ -> skip;

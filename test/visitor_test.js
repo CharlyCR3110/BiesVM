@@ -22,7 +22,7 @@ function testVisitor(input) {
 
 // Ejemplo de entrada para probar
 const inputProgram = `
-let x = 5
+let {const x = [1,2] const y = 2} in x + y
 `;
 
 testVisitor(inputProgram);

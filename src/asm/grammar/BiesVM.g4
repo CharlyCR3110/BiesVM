@@ -8,14 +8,18 @@ program
 // Declaraciones e instrucciones
 statement
     : letDeclaration               // Declaraciones de variables let/var
+    | letInDeclaration             //Declaraciones let plano
     | funDeclaration               // Declaraciones de funciones
     | expressionStatement          // Expresiones
     ;
 
 // Declaraciones de let/var
-letDeclaration
+letInDeclaration
     : LET variableDeclarationBlock 'in' expressionBlock
-    | LET variableDeclaration
+    ;
+
+letDeclaration
+    : LET simpleDeclaration
     ;
 
 variableDeclarationBlock
@@ -23,9 +27,12 @@ variableDeclarationBlock
     ;
 
 variableDeclaration
-    : CONST IDENTIFIER '=' expression     // Constantes
-    | VAR IDENTIFIER '=' expression       // Variables
-    | IDENTIFIER '=' expression
+    : CONST IDENTIFIER '=' primaryExpression     // Constantes
+    | VAR IDENTIFIER '=' primaryExpression       // Variables
+    ;
+
+simpleDeclaration
+    : IDENTIFIER '=' primaryExpression
     ;
 
 // Declaraciones de funciones

@@ -1,19 +1,21 @@
+// BiesVM.g4 - Grammar for the BIES language
+
 grammar BiesVM;
 
 // Programa principal
 program
-    : (statement | expression)* EOF
+    : (statement | expression | function)* EOF
     ;
 
 // Declaraciones e instrucciones
 statement
     : letDeclaration               // Declaraciones de variables let/var
-    | letInDeclaration             //Declaraciones let plano
+    | letInDeclaration             // Declaraciones let in
     | funDeclaration               // Declaraciones de funciones
     | expressionStatement          // Expresiones
     ;
 
-// Declaraciones de let/var
+// Declaraciones let/var
 letInDeclaration
     : LET variableDeclarationBlock 'in' expressionBlock
     ;
@@ -52,6 +54,18 @@ expressionStatement
 expression
     : assignmentExpression                 // Expresiones de asignación
     | logicalOrExpression                  // Expresiones lógicas
+    | conditionalExpression                // Expresiones condicionales if-then-else
+    ;
+
+//function
+function
+    : PRINT '(' primaryExpression? ')' // Modificado para permitir argumentos
+    | INPUT '(' primaryExpression? ')' 
+    | INT '(' primaryExpression? ')' 
+    | STR '(' primaryExpression? ')' 
+    | BOOL '(' primaryExpression? ')' 
+    | LIST '(' primaryExpression? ')' 
+    | LEN '(' primaryExpression? ')'
     ;
 
 // Expresiones condicionales if-then-else
@@ -113,7 +127,7 @@ primaryExpression
 
 // Expresiones de listas
 listExpression
-    : '[' expressionList? ']'
+    : '[' ( primaryExpression (',' primaryExpression)* ) ?']'
     ;
 
 expressionList

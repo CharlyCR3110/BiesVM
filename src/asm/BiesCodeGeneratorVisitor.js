@@ -91,15 +91,17 @@ visitLetInDeclaration(ctx) {
     const expressionValue = varDecl.primaryExpression()
       ? this.visit(varDecl.primaryExpression())
       : null;
+      const expressionBlock = this.visit(ctx.expressionBlock());
 
-    if (varName && expressionValue) {
-      console.log(`Variable: ${varName}, Valor (let-in): ${JSON.stringify(expressionValue)}`);
-      this.facts.push({ op: 'declare_var', id: varName, value: expressionValue });
+    if (varName && expressionValue && expressionBlock) {
+      console.log(`Variable: ${varName}, Valor (let-in): ${JSON.stringify(expressionValue)} body: ${JSON.stringify(expressionBlock)}}`);
+      this.facts.push({ op: 'declare_var', id: varName, value: expressionValue, body: expressionBlock });
     }
   });
 
   return this.visitChildren(ctx);
 }
+
 
   /**
  * Visits each variable declaration within a block.

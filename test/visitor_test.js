@@ -22,7 +22,11 @@ function testVisitor(input) {
 
 // Ejemplo de entrada para probar
 const inputProgram = `
-let {const x = [1,2] const y = 2} in x + y
+// Version compleja 0
+print("Testing helloworld Version 0 ***")
+print("Hello World!") 
+let x= 666
+let {var a= 555 var b= 2} in {a + b}
 `;
 
 testVisitor(inputProgram);

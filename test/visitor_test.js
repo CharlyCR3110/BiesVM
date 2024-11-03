@@ -1,9 +1,7 @@
 import antlr4 from 'antlr4' // Importa el módulo antlr4
-import BiesVMParser from '../src/asm/grammar/.antlr/BiesVMParser.js'
-import BiesVMLexer from '../src/asm/grammar/.antlr/BiesVMLexer.js'
+import BiesVMParser from '../src/asm/grammar/.antlr/BiesCParser.js'
+import BiesVMLexer from '../src/asm/grammar/.antlr/BiesCLexer.js'
 import BiesCodeGeneratorVisitor from '../src/asm/BiesCodeGeneratorVisitor.js'
-/* eslint-disable no-unused-vars */
-import BiesVMVisitor from '../src/asm/grammar/.antlr/BiesVMVisitor.js'
 
 function testVisitor (input) {
   const chars = new antlr4.InputStream(input)
@@ -22,12 +20,46 @@ function testVisitor (input) {
 }
 
 // Ejemplo de entrada para probar
-const inputProgram = `
+const inputProgram00 = `
 // Version compleja 0
 print("Testing helloworld Version 0 ***")
 print("Hello World!") 
-let x= 666
-let {var a= 555 var b= 2} in {a + b}
 `
 
-testVisitor(inputProgram)
+const inputProgram01 = `
+// Version compleja 1
+let splash = () => print("Testing helloworld Version 1 ***")
+splash()
+print("Hello World!") 
+`
+
+// fix: no concantena el valor de `version` en el string
+const inputProgram02 = `
+let splash = (msg) => print(msg)
+let version = 666 - 664
+splash("Testing helloworld Version " + version + "***")
+print("Hello World!") 
+`
+
+// not tested yet
+const inputProgram03 = `
+// Version compleja 3
+let splash = (msg) => print(msg)
+let greetings = () => "Hello World!"
+let version = (4 + 1 - 2)
+splash("Testing helloworld Version " + version + " ***")
+print(greetings()) 
+`
+try {
+  console.log('Testing visitor...')
+
+  console.log('----'.repeat(10))
+  testVisitor(inputProgram00)
+  console.log('----'.repeat(10))
+  testVisitor(inputProgram01)
+  console.log('----'.repeat(10))
+  testVisitor(inputProgram02)
+  console.log('----'.repeat(10))
+} catch (e) {
+  console.error(e)
+}

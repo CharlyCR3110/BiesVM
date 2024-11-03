@@ -62,17 +62,22 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
   }
 
   visitPrimaryExpr (ctx) {
-    if (ctx.identifier()) {
-      return this.visitIdentifier(ctx.identifier())
-    } else if (ctx.literal()) {
-      return this.visitLiteral(ctx.literal())
-    } else if (ctx.expression()) {
-      return this.visit(ctx.expression())
-    } else if (ctx.lambdaExpr()) {
-      return this.visitLambdaExpr(ctx.lambdaExpr())
-    } else {
-      throw new Error(`Expresión primaria no soportada aún ${ctx.getText()}`)
+    const handlers = [
+      { condition: () => ctx.identifier(), handler: () => this.visitIdentifier(ctx.identifier()) },
+      { condition: () => ctx.literal(), handler: () => this.visitLiteral(ctx.literal()) },
+      { condition: () => ctx.expression(), handler: () => this.visit(ctx.expression()) },
+      { condition: () => ctx.lambdaExpr(), handler: () => this.visitLambdaExpr(ctx.lambdaExpr()) }
+      // to add more handlers use this template
+      // { condition: () => ctx.<rule>(), handler: () => this.visit<Rule>(ctx.<rule>()) }
+    ]
+
+    for (const { condition, handler } of handlers) {
+      if (condition()) {
+        return handler()
+      }
     }
+
+    throw new Error(`Expresión primaria no soportada aún: ${ctx.getText()}`)
   }
 
   visitPostfixExpr (ctx) {

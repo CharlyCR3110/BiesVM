@@ -223,17 +223,21 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
   }
 
   visitStatement (ctx) {
-    if (ctx.letStatement()) {
-      return this.visit(ctx.letStatement())
-    } else if (ctx.constStatement()) {
-      return this.visit(ctx.constStatement())
-    } else if (ctx.varStatement()) {
-      return this.visit(ctx.varStatement())
-    } else if (ctx.funDeclaration()) {
-      return this.visit(ctx.funDeclaration())
-    } else if (ctx.expressionStatement()) {
-      return this.visit(ctx.expressionStatement())
+    const handlers = [
+      { condition: () => ctx.letStatement(), handler: () => this.visit(ctx.letStatement()) },
+      { condition: () => ctx.constStatement(), handler: () => this.visit(ctx.constStatement()) },
+      { condition: () => ctx.varStatement(), handler: () => this.visit(ctx.varStatement()) },
+      { condition: () => ctx.funDeclaration(), handler: () => this.visit(ctx.funDeclaration()) },
+      { condition: () => ctx.expressionStatement(), handler: () => this.visit(ctx.expressionStatement()) }
+    ]
+
+    for (const { condition, handler } of handlers) {
+      if (condition()) {
+        return handler()
+      }
     }
+
+    throw new Error(`Declaración de sentencia no soportada: ${ctx.getText()}`)
   }
 
   visitLetStatement (ctx) {

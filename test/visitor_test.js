@@ -33,7 +33,6 @@ splash()
 print("Hello World!") 
 `
 
-// fix: no concantena el valor de `version` en el string
 const inputProgram02 = `
 let splash = (msg) => print(msg)
 let version = 666 - 664
@@ -41,7 +40,6 @@ splash("Testing helloworld Version " + version + "***")
 print("Hello World!") 
 `
 
-// not tested yet
 const inputProgram03 = `
 // Version compleja 3
 let splash = (msg) => print(msg)
@@ -59,6 +57,8 @@ try {
   testVisitor(inputProgram01)
   console.log('----'.repeat(10))
   testVisitor(inputProgram02)
+  console.log('----'.repeat(10))
+  testVisitor(inputProgram03)
   console.log('----'.repeat(10))
 } catch (e) {
   console.error(e)

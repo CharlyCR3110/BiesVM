@@ -1,4 +1,4 @@
-import BiesVMVisitor from '../asm/grammar/.antlr/BiesVMVisitor.js'
+import BiesVMVisitor from '../asm/grammar/.antlr/BiesCVisitor.js'
 
 /**
  * Visitor class to handle BIES language constructs and build intermediate representations.
@@ -18,7 +18,7 @@ import BiesVMVisitor from '../asm/grammar/.antlr/BiesVMVisitor.js'
 export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
   constructor () {
     super()
-    this.facts = []
+    this.environment = {}
   }
 
   /**
@@ -28,161 +28,244 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
    * @returns {Object} - facts and functions after visiting the program.
    */
   visitProgram (ctx) {
-    this.visitChildren(ctx)
-    return { facts: this.facts }
+    const statements = ctx.statement()
+    for (const stmt of statements) {
+      this.visit(stmt)
+    }
   }
 
-  /**
- * Visits a let declaration, processing variable declarations in scope.
- * @param {Object} ctx - Context of letDeclaration node.
- */
-  visitLetDeclaration (ctx) {
-    const varDecl = ctx.simpleDeclaration()
-    if (varDecl) {
-      const identifier = varDecl.IDENTIFIER().getText()
-      const expression = varDecl.primaryExpression()
-      const value = expression ? this.visit(expression) : null // Visit the primary expression if it exists
-      console.log(`Variable: ${identifier}, Valor (let): ${JSON.stringify(value)}`)
-      this.facts.push({ name: identifier, value })
+  // todo: borrar - nuevo approach para el visitor -- visitar de las rules mas basicas a las mas complejas
+  visitLiteral (ctx) {
+    if (ctx.BOOL_LITERAL()) {
+      return ctx.BOOL_LITERAL().getText() === 'true'
+    } else if (ctx.STRING_LITERAL()) {
+      const text = ctx.STRING_LITERAL().getText()
+      return text.slice(1, -1) // Remover comillas
+    } else if (ctx.NUMBER_LITERAL()) {
+      return parseFloat(ctx.NUMBER_LITERAL().getText())
     }
-    return this.visitChildren(ctx)
   }
 
-  /**
- * Visita el nodo primaryExpression y devuelve su valor.
- * Utiliza un mapa de funciones para despachar el tipo de nodo.
- * @param {Object} ctx - Contexto del nodo primaryExpression.
- * @returns {*} - El valor de la expresión primaria.
- */
-  visitPrimaryExpression (ctx) {
-    const handlers = {
-      NUMBER: () => parseFloat(ctx.NUMBER().getText()),
-      STRING: () => ctx.STRING().getText().slice(1, -1), // Remueve comillas
-      BOOLEAN: () => ctx.BOOLEAN().getText() === 'true',
-      IDENTIFIER: () => ctx.IDENTIFIER().getText(),
-      lambdaExpression: () => this.visit(ctx.lambdaExpression()),
-      listExpression: () => this.visit(ctx.listExpression()),
-      conditionalExpression: () => this.visit(ctx.conditionalExpression()),
-      functionCall: () => this.visit(ctx.functionCall())
-    }
-
-    // Encuentra el primer tipo de nodo presente en `ctx` y lo maneja.
-    for (const [key, handler] of Object.entries(handlers)) {
-      if (ctx[key]()) {
-        return handler()
+  visitIdentifier (ctx) {
+    const name = ctx.getText()
+    let env = this.environment
+    while (env !== null) {
+      if (env[name] !== undefined) {
+        return env[name]
       }
+      env = Object.getPrototypeOf(env)
     }
-
-    console.error('Expresión primaria no reconocida:', ctx.getText())
-    return undefined
-  }
-
-  visitLetInDeclaration (ctx) {
-    const variables = ctx.variableDeclarationBlock()
-      ? ctx.variableDeclarationBlock().variableDeclaration() || []
-      : []
-
-    variables.forEach(varDecl => {
-      const identifierNode = varDecl.IDENTIFIER()
-      const varName = identifierNode ? identifierNode.getText() : null
-      const expressionValue = varDecl.primaryExpression()
-        ? this.visit(varDecl.primaryExpression())
-        : null
-      const expressionBlock = this.visit(ctx.expressionBlock())
-
-      if (varName && expressionValue && expressionBlock) {
-        console.log(`Variable: ${varName}, Valor (let-in): ${JSON.stringify(expressionValue)} body: ${JSON.stringify(expressionBlock)}}`)
-        this.facts.push({ op: 'declare_var', id: varName, value: expressionValue, body: expressionBlock })
-      }
-    })
-
-    return this.visitChildren(ctx)
-  }
-
-  /**
- * Visits each variable declaration within a block.
- * @param {Object} ctx - Context of variableDeclaration node.
- */
-  // visitVariableDeclaration(ctx) {
-  //   const identifierNode = ctx.IDENTIFIER();
-  //   if (!identifierNode.getText()) {
-  //     console.error('No se encontró IDENTIFIER en el contexto de la declaración de variable.');
-  //     return; // Manejo de error
-  //   }
-
-  //   const identifier = identifierNode.getText();
-  //   const expressionValue = this.visit(ctx.primaryExpression());
-  //   console.log(`Variable: ${identifier}, Value: ${JSON.stringify(expressionValue)}`);
-  //   this.facts.push({ op: 'declare_var', id: identifier, value: expressionValue });
-  //   return null;
-  // }
-
-  visitListExpression (ctx) {
-    const expressions = ctx.primaryExpression().map(exprCtx => this.visit(exprCtx))
-    return expressions
-  }
-
-  /**
- * Visits function declarations, storing them in the function list.
- * @param {Object} ctx - Context of the funDeclaration node.
- */
-  visitFunDeclaration (ctx) {
-    const identifierNode = ctx.IDENTIFIER()
-    if (!identifierNode) {
-      console.error('No se encontró IDENTIFIER en la declaración de la función.')
-      return // Manejo de error
-    }
-
-    const functionName = identifierNode.getText()
-    const parameterList = ctx.parameterList()
-    const parameters = parameterList ? parameterList.IDENTIFIER().map(param => param.getText()) : []
-
-    // Guardar la función en el diccionario de funciones
-    this.functions[functionName] = { parameters }
-    console.log(`Función: ${functionName}, Parámetros: ${parameters.join(', ')}`)
-
-    // Procesar el cuerpo de la función
-    const functionBody = ctx.expression()
-    this.facts.push({ op: 'declare_func', id: functionName, parameters })
-
-    // Visitar el cuerpo de la función
-    this.visit(functionBody)
-    return null
-  }
-
-  visitFunction (ctx) {
-    const functionName = ctx.children[0].getText() // Obtener el nombre de la función
-    const argument = ctx.primaryExpression() ? this.visit(ctx.primaryExpression()) : undefined // Obtener el argumento
-
-    // Mapa de funciones
-    const handlers = {
-      print: () => this.addFunctionCall(functionName, { type: 'print', value: argument }),
-      input: () => this.addFunctionCall(functionName, { type: 'input', value: null }), // Placeholder para entrada
-      int: () => this.addFunctionCall(functionName, { type: 'int', value: parseInt(argument, 10) }),
-      str: () => this.addFunctionCall(functionName, { type: 'str', value: String(argument) }),
-      bool: () => this.addFunctionCall(functionName, { type: 'bool', value: Boolean(argument) }),
-      list: () => this.addFunctionCall(functionName, { type: 'list', value: argument }),
-      len: () => this.addFunctionCall(functionName, { type: 'len', value: argument.length })
-    }
-
-    // Ejecutar el manejador correspondiente si existe
-    if (handlers[functionName]) {
-      handlers[functionName]() // Llamar al manejador y guardar en facts
+    if (name === 'print') {
+      return console.log
+    } else if (this.environment[name]) {
+      return this.environment[name]
     } else {
-      console.error(`Función no reconocida: ${functionName}`)
+      throw new Error(`Variable ${name} no definida`)
     }
   }
 
-  /**
-   * Adds a function call result to the facts array.
-   * @param {string} functionName - The name of the function.
-   * @param {Object} result - The result of the function call.
-   */
-  addFunctionCall (functionName, result) {
-    const functionCall = {
-      functionName,
-      ...result
+  visitPrimaryExpr (ctx) {
+    if (ctx.identifier()) {
+      return this.visitIdentifier(ctx.identifier())
+    } else if (ctx.literal()) {
+      return this.visitLiteral(ctx.literal())
+    } else if (ctx.expression()) {
+      return this.visit(ctx.expression())
+    } else if (ctx.lambdaExpr()) {
+      return this.visitLambdaExpr(ctx.lambdaExpr())
+    } else {
+      throw new Error(`Expresión primaria no soportada aún ${ctx.getText()}`)
     }
-    this.facts.push(functionCall) // Agregar el resultado al stack de instrucciones
+  }
+
+  visitPostfixExpr (ctx) {
+    let result = this.visit(ctx.primaryExpr())
+    const postfixOps = ctx.postfixOp()
+    for (const op of postfixOps) {
+      result = this.visitPostfixOp(op, result)
+    }
+    return result
+  }
+
+  visitPostfixOp (ctx, func) {
+    if (ctx.argumentList()) {
+      const args = this.visitArgumentList(ctx.argumentList())
+      if (typeof func === 'function') {
+        return func(...args)
+      } else {
+        throw new Error('Intento de llamar a un valor no función')
+      }
+    } else {
+      // Llamada sin argumentos
+      if (typeof func === 'function') {
+        return func()
+      } else {
+        throw new Error('Intento de llamar a un valor no función')
+      }
+    }
+  }
+
+  visitArgumentList (ctx) {
+    return ctx.expression().map(expr => this.visit(expr))
+  }
+
+  visitUnaryExpr (ctx) {
+    if (ctx.unaryExpr()) {
+      const operator = ctx.getChild(0).getText()
+      const value = this.visit(ctx.unaryExpr())
+      if (operator === '!') {
+        return !value
+      } else if (operator === '-') {
+        return -value
+      }
+    } else {
+      return this.visit(ctx.postfixExpr())
+    }
+  }
+
+  visitPowerExpr (ctx) {
+    let result = this.visit(ctx.unaryExpr(0))
+    for (let i = 1; i < ctx.unaryExpr().length; i++) {
+      const right = this.visit(ctx.powerExpr(i))
+      result = Math.pow(result, right)
+    }
+    return result
+  }
+
+  visitMultiplicativeExpr (ctx) {
+    let result = this.visit(ctx.powerExpr(0))
+    for (let i = 1; i < ctx.powerExpr().length; i++) {
+      const operator = ctx.getChild(2 * i - 1).getText()
+      const right = this.visit(ctx.powerExpr(i))
+      if (operator === '*') {
+        result *= right
+      } else if (operator === '/') {
+        result /= right
+      }
+    }
+    return result
+  }
+
+  visitAdditiveExpr (ctx) {
+    let result = this.visit(ctx.multiplicativeExpr(0))
+    for (let i = 1; i < ctx.multiplicativeExpr().length; i++) {
+      const operator = ctx.getChild(2 * i - 1).getText()
+      const right = this.visit(ctx.multiplicativeExpr(i))
+      if (operator === '+') {
+        result += right
+      } else if (operator === '-') {
+        result -= right
+      }
+    }
+    return result
+  }
+
+  visitRelationalExpr (ctx) {
+    let result = this.visit(ctx.additiveExpr(0))
+    for (let i = 1; i < ctx.additiveExpr().length; i++) {
+      const operator = ctx.getChild(2 * i - 1).getText()
+      const right = this.visit(ctx.additiveExpr(i))
+      if (operator === '>') {
+        result = result > right
+      } else if (operator === '>=') {
+        result = result >= right
+      } else if (operator === '<') {
+        result = result < right
+      } else if (operator === '<=') {
+        result = result <= right
+      }
+    }
+    return result
+  }
+
+  visitEqualityExpr (ctx) {
+    let result = this.visit(ctx.relationalExpr(0))
+    for (let i = 1; i < ctx.relationalExpr().length; i++) {
+      const operator = ctx.getChild(2 * i - 1).getText()
+      const right = this.visit(ctx.relationalExpr(i))
+      if (operator === '==') {
+        /* eslint-disable eqeqeq */
+        result = result == right
+      } else if (operator === '!=') {
+        result = result != right
+      }
+    }
+    return result
+  }
+
+  visitLogicalAndExpr (ctx) {
+    let result = this.visit(ctx.equalityExpr(0))
+    for (let i = 1; i < ctx.equalityExpr().length; i++) {
+      result = result && this.visit(ctx.equalityExpr(i))
+    }
+    return result
+  }
+
+  visitLogicalOrExpr (ctx) {
+    let result = this.visit(ctx.logicalAndExpr(0))
+    for (let i = 1; i < ctx.logicalAndExpr().length; i++) {
+      result = result || this.visit(ctx.logicalAndExpr(i))
+    }
+    return result
+  }
+
+  visitExpression (ctx) {
+    return this.visit(ctx.logicalOrExpr())
+  }
+
+  visitExpressionStatement (ctx) {
+    return this.visit(ctx.expression())
+  }
+
+  visitStatement (ctx) {
+    if (ctx.letStatement()) {
+      return this.visit(ctx.letStatement())
+    } else if (ctx.constStatement()) {
+      return this.visit(ctx.constStatement())
+    } else if (ctx.varStatement()) {
+      return this.visit(ctx.varStatement())
+    } else if (ctx.funDeclaration()) {
+      return this.visit(ctx.funDeclaration())
+    } else if (ctx.expressionStatement()) {
+      return this.visit(ctx.expressionStatement())
+    }
+  }
+
+  visitLetStatement (ctx) {
+    const name = ctx.identifier().getText()
+    const value = this.visit(ctx.expression())
+    if (name === undefined) {
+      throw new Error('visitLetStatement: Nombre indefinido')
+    }
+    if (value === undefined) {
+      throw new Error('visitLetStatement: Valor indefinido')
+    }
+
+    if (this.environment[name] !== undefined) {
+      throw new Error(`Variable ${name} ya definida`)
+    }
+
+    this.environment[name] = value
+
+    return value
+  }
+
+  visitLambdaExpr (ctx) {
+    const params = ctx.paramList() ? ctx.paramList().identifier().map(id => id.getText()) : []
+    const body = ctx.expression()
+    const self = this
+    const func = function () {
+      const newEnv = Object.create(self.environment)
+      for (let i = 0; i < arguments.length; i++) {
+        newEnv[params[i]] = arguments[i]
+      }
+      const oldEnv = self.environment
+      self.environment = newEnv
+      const result = self.visit(body)
+      self.environment = oldEnv
+      return result
+    }
+
+    return func
   }
 }

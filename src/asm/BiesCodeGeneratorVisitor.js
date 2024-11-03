@@ -34,7 +34,6 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     }
   }
 
-  // todo: borrar - nuevo approach para el visitor -- visitar de las rules mas basicas a las mas complejas
   visitLiteral (ctx) {
     if (ctx.BOOL_LITERAL()) {
       return ctx.BOOL_LITERAL().getText() === 'true'
@@ -57,8 +56,6 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     }
     if (name === 'print') {
       return console.log
-    } else if (this.environment[name]) {
-      return this.environment[name]
     } else {
       throw new Error(`Variable ${name} no definida`)
     }
@@ -96,7 +93,6 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
         throw new Error('Intento de llamar a un valor no función')
       }
     } else {
-      // Llamada sin argumentos
       if (typeof func === 'function') {
         return func()
       } else {
@@ -152,7 +148,11 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
       const operator = ctx.getChild(2 * i - 1).getText()
       const right = this.visit(ctx.multiplicativeExpr(i))
       if (operator === '+') {
-        result += right
+        if (typeof result === 'string' || typeof right === 'string') {
+          result = String(result) + String(right)
+        } else {
+          result += right
+        }
       } else if (operator === '-') {
         result -= right
       }

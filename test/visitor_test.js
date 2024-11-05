@@ -44,6 +44,35 @@ let version = (4 + 1 - 2)
 splash("Testing helloworld Version " + version + " ***")
 print(greetings()) 
 `
+
+const inputProgram04 = `
+// Version compleja 4 let-in
+let {
+	 const splash = (msg) => print(msg)
+	 const greetings = () => "Hello World!"
+	} in {
+    let version = 4 * 4 / (3 + 1)
+		splash("Testing helloworld Version " + version + " ***")
+		print(greetings()) 
+	}
+`
+
+
+const inputProgram05 = `
+// Version compleja 5 let-in
+let {
+		const splash = (msg) => print(msg)
+		const greetings = () => 
+		      let {const greet = input("Enter greeting>") 
+			  } in 
+			  if (len(greet) == 0 ) then "Hello World!" else greet
+	} in {
+	    let version = 5 ** 5 / (4 + 1)
+		splash("Testing helloworld Version " + version + " ***")
+		print(greetings())
+    }		
+`
+
 try {
   console.log('Testing visitor...')
 
@@ -56,6 +85,9 @@ try {
   console.log('----'.repeat(10))
   testVisitor(inputProgram03)
   console.log('----'.repeat(10))
+  testVisitor(inputProgram04)
+  console.log('----'.repeat(10))
+  testVisitor(inputProgram05)
 } catch (e) {
   console.error(e)
 }

@@ -12,6 +12,8 @@ statement
     | varStatement
     | funDeclaration
     | expressionStatement
+    | letInExpr
+    | ifThenElseExpr
     ;
 
 // Declaraciones de variables
@@ -96,7 +98,7 @@ primaryExpr
     | listExpr
     | blockExpr
     | ifThenElseExpr
-    | letInExpr
+    | letStatement
     ;
 
 // Lambdas anónimas
@@ -106,7 +108,7 @@ lambdaExpr
 
 // Expresión 'let-in'
 letInExpr
-    : 'let' '{' (constStatement | letStatement | varStatement)* '}' 'in' expression
+    : 'let' '{' (constStatement | letStatement | varStatement)* '}' 'in' '{' expression * '}'
     ;
 
 // Bloque de expresiones
@@ -116,7 +118,7 @@ blockExpr
 
 // Expresión condicional
 ifThenElseExpr
-    : 'if' expression 'then' expression 'else' expression
+    : 'if' '('expression')' 'then' expression 'else' expression
     ;
 
 // Expresión de lista

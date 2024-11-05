@@ -1,4 +1,5 @@
 import BiesVMVisitor from '../asm/grammar/.antlr/BiesCVisitor.js'
+import readline from 'readline'
 
 /**
  * Visitor class to handle BIES language constructs and build intermediate representations.
@@ -45,6 +46,30 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     }
   }
 
+  
+
+/**
+   * Helper method to get user input from the console.
+   * This method returns a promise that resolves with the user's input.
+   * @returns {Promise<string>} A promise that resolves to the user input.
+   * @memberof InpInstruction
+   */
+async getUserInput(prompt) {
+  // Importando readline dinámicamente con import()
+  const readline = (await import('readline')).createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  return new Promise((resolve) => {
+    // Ask the user for input
+    readline.question(prompt, (value) => {
+      readline.close();
+      resolve(value); // Resolve the promise with the user input
+    });
+  });
+}
+
   visitIdentifier (ctx) {
     const name = ctx.getText()
     let env = this.environment
@@ -56,8 +81,26 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     }
     if (name === 'print') {
       return console.log
+    } else if (name === 'input') {
+      return async (prompt) => await this.getUserInput(prompt || "Enter input: ")
+    } else if (name === 'int') {
+      return (value) => {
+        const num = parseInt(value, 10);
+        if (isNaN(num)) throw new Error(`int: No se pudo convertir '${value}' a número`);
+        return num;
+      };
+    } else if (name === 'str') {
+      return (value) => String(value);
+    } else if (name === 'len') {
+      return (value) => {
+        if (typeof value === "string" || Array.isArray(value)) {
+          return value.length;
+        } else {
+          throw new Error(`len: Tipo no soportado para 'len'`);
+        }
+      };
     } else {
-      throw new Error(`Variable ${name} no definida`)
+      throw new Error(`Variable o función '${name}' no definida`);
     }
   }
 
@@ -66,7 +109,8 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
       { condition: () => ctx.identifier(), handler: () => this.visitIdentifier(ctx.identifier()) },
       { condition: () => ctx.literal(), handler: () => this.visitLiteral(ctx.literal()) },
       { condition: () => ctx.expression(), handler: () => this.visit(ctx.expression()) },
-      { condition: () => ctx.lambdaExpr(), handler: () => this.visitLambdaExpr(ctx.lambdaExpr()) }
+      { condition: () => ctx.lambdaExpr(), handler: () => this.visitLambdaExpr(ctx.lambdaExpr()) },
+      { condition: () => ctx.letStatement(), handler: () => this.visitLetStatement(ctx.letStatement())}
       // to add more handlers use this template
       // { condition: () => ctx.<rule>(), handler: () => this.visit<Rule>(ctx.<rule>()) }
     ]
@@ -223,12 +267,15 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
   }
 
   visitStatement (ctx) {
+    console.log("Tipo de declaración:", ctx.getText());
     const handlers = [
       { condition: () => ctx.letStatement(), handler: () => this.visit(ctx.letStatement()) },
       { condition: () => ctx.constStatement(), handler: () => this.visit(ctx.constStatement()) },
       { condition: () => ctx.varStatement(), handler: () => this.visit(ctx.varStatement()) },
       { condition: () => ctx.funDeclaration(), handler: () => this.visit(ctx.funDeclaration()) },
-      { condition: () => ctx.expressionStatement(), handler: () => this.visit(ctx.expressionStatement()) }
+      { condition: () => ctx.expressionStatement(), handler: () => this.visit(ctx.expressionStatement()) },
+      { condition: () => ctx.letInExpr(), handler: () => this.visit(ctx.letInExpr())},
+      { condition: () => ctx.ifThenElseExpr(), handler: () => this.visit(ctx.ifThenElseExpr())}
     ]
 
     for (const { condition, handler } of handlers) {
@@ -258,6 +305,32 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
 
     return value
   }
+  visitConstStatement(ctx) {
+    const name = ctx.identifier().getText();
+    const value = this.visit(ctx.expression());
+  
+    if (this.environment[name] !== undefined) {
+      throw new Error(`Variable ${name} ya definida`);
+    }
+  
+    Object.defineProperty(this.environment, name, {
+      value,
+      writable: false,
+      configurable: false
+    });
+  
+    return value;
+  }
+  
+  visitVarStatement(ctx) {
+    const name = ctx.identifier().getText();
+    const value = this.visit(ctx.expression());
+  
+    // Permitir la redeclaración en var
+    this.environment[name] = value;
+  
+    return value;
+  }
 
   visitLambdaExpr (ctx) {
     const params = ctx.paramList() ? ctx.paramList().identifier().map(id => id.getText()) : []
@@ -276,5 +349,37 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     }
 
     return func
+  }
+
+    // Agrega este método a tu clase BiesCodeGeneratorVisitor
+  visitLetInExpr(ctx) {
+    const environmentBackup = { ...this.environment } // Guardar el entorno actual para restaurarlo después
+    // Procesar todas las declaraciones dentro de let {...}
+    const statements = ctx.constStatement() || ctx.letStatement() || ctx.varStatement()
+    for (const stmt of statements) {
+      this.visit(stmt) // Procesa cada declaración
+    }
+  
+    // Procesar la expresión final en 'in { ... }'
+    const result = this.visit(ctx.expression());
+    this.environment = environmentBackup // Restaurar el entorno original
+    return result
+  }
+  visitIfThenElseExpr(ctx) {
+    // Extrae la condición y las expresiones 'then' y 'else'
+    const condition = this.visit(ctx.expression(0)); // Evaluar la expresión de condición
+    const thenExpression = this.visit(ctx.expression(1)); // Evaluar la expresión 'then'
+    const elseExpression = this.visit(ctx.expression(2)); // Evaluar la expresión 'else'
+
+    // Generar el código
+    const code = `
+      if (${condition}) {
+        ${thenExpression};
+      } else {
+        ${elseExpression};
+      }
+    `;
+
+    return code.trim(); // Retorna el código generado
   }
 }

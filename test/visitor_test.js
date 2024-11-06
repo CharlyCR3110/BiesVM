@@ -11,6 +11,11 @@ function testVisitor (input) {
   const visitor = new BiesCodeGeneratorVisitor()
   const result = visitor.visit(tree) // Visita el árbol de análisis
 
+  console.log('Resultados de factsGenerator:');
+  for (const fact of visitor.factsGenerator()) {
+    console.log(fact);  // Imprimimos cada hecho generado
+  }
+
   console.log('Resultado de la visita al árbol:')
   console.log(result) // undefined porque de momento no se retorna nada (la branch de raque lo tiene diferente por si acaso)
 }
@@ -63,7 +68,7 @@ const inputProgram05 = `
 let {
 		const splash = (msg) => print(msg)
 		const greetings = () => 
-		      let {const greet = "Hola" 
+		      let {const greet = input("Enter greeting>") 
 			  } in 
 			  if (len(greet) == 0 ) then "Hello World!" else greet
 	} in {

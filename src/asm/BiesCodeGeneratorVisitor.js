@@ -34,7 +34,12 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     for (const stmt of statements) {
       this.visit(stmt)
     }
-    return this.facts
+  }
+
+  *factsGenerator() {
+    for (const fact of this.facts) {
+      yield fact;
+    }
   }
 
   visitLiteral (ctx) {
@@ -434,4 +439,5 @@ async getUserInput(prompt) {
 
     return condition ? thenExpression : elseExpression;
 }
+
 }

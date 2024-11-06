@@ -63,14 +63,26 @@ const inputProgram05 = `
 let {
 		const splash = (msg) => print(msg)
 		const greetings = () => 
-		      let {const greet = input("Enter greeting>") 
+		      let {const greet = "Hola" 
 			  } in 
-			  {if (len(greet) == 0 ) then "Hello World!" else greet}
+			  if (len(greet) == 0 ) then "Hello World!" else greet
 	} in {
 	    let version = 5 ** 2 / (4 + 1)
 		splash("Testing helloworld Version " + version + " ***")
 		print(greetings())
     }		
+`
+
+const inputProgram06 = `
+// Version Extra compleja 6 Maximo entre dos números, lambda binaria
+let max = (a, b) => if (a > b) then a else b
+let {
+	const x = 10
+	const y = 20
+} in {
+	print("*** Testing max("+ x + " ," + y + ") ***")
+	print(max(x, y))
+}
 `
 
 try {
@@ -88,6 +100,8 @@ try {
   testVisitor(inputProgram04)
   console.log('----'.repeat(10))
   testVisitor(inputProgram05)
+  console.log('----'.repeat(10))
+  testVisitor(inputProgram06)
 } catch (e) {
   console.error(e)
 }

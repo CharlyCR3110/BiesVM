@@ -108,7 +108,7 @@ lambdaExpr
 
 // Expresión 'let-in'
 letInExpr
-    : 'let' '{' (constStatement | letStatement | varStatement)* '}' 'in' '{' expression * '}'
+    : 'let' '{' (constStatement | letStatement | varStatement)* '}' 'in' '{'? expression * '}'?
     ;
 
 // Bloque de expresiones

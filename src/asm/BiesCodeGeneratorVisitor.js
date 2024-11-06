@@ -20,6 +20,7 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
   constructor () {
     super()
     this.environment = {}
+    this.facts= []
   }
 
   /**
@@ -33,17 +34,18 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     for (const stmt of statements) {
       this.visit(stmt)
     }
+    return this.facts
   }
 
   visitLiteral (ctx) {
-    if (ctx.BOOL_LITERAL()) {
-      return ctx.BOOL_LITERAL().getText() === 'true'
-    } else if (ctx.STRING_LITERAL()) {
-      const text = ctx.STRING_LITERAL().getText()
-      return text.slice(1, -1) // Remover comillas
-    } else if (ctx.NUMBER_LITERAL()) {
-      return parseFloat(ctx.NUMBER_LITERAL().getText())
-    }
+    const literal = ctx.BOOL_LITERAL() 
+      ? ctx.BOOL_LITERAL().getText()
+      : ctx.STRING_LITERAL() 
+        ? ctx.STRING_LITERAL().getText().slice(1, -1)
+        : parseFloat(ctx.NUMBER_LITERAL().getText())
+        
+    this.facts.push({ type: 'literal', value: literal })
+    return literal
   }
 
   
@@ -72,6 +74,7 @@ async getUserInput(prompt) {
     const name = ctx.getText()
     console.log('Name: ',name)
     let env = this.environment
+    this.facts.push({ type: 'identifier', name });
     while (env !== null) {
       if (env[name] !== undefined) {
         return env[name]
@@ -81,7 +84,7 @@ async getUserInput(prompt) {
     if (name === 'print') {
       return console.log
     } else if (name === 'input') {
-      return (prompt) => this.getUserInput(prompt || "Enter input: ").then(value => value);
+      return async (prompt) => this.getUserInput(prompt || "Enter input: ").then(value => value);
     } else if (name === 'int') {
       return (value) => {
         const num = parseInt(value, 10);
@@ -152,18 +155,22 @@ async getUserInput(prompt) {
   }
 
   visitArgumentList (ctx) {
-    return ctx.expression().map(expr => this.visit(expr))
+    const args = ctx.expression().map(expr => this.visit(expr))
+    return args
   }
 
   visitUnaryExpr (ctx) {
     if (ctx.unaryExpr()) {
       const operator = ctx.getChild(0).getText()
       const value = this.visit(ctx.unaryExpr())
-      if (operator === '!') {
-        return !value
-      } else if (operator === '-') {
-        return -value
-      }
+      const result = operator === '!' ? !value : -value
+      this.facts.push({ 
+        type: 'unaryExpression', 
+        operator, 
+        value, 
+        result 
+      })
+      return result
     } else {
       return this.visit(ctx.postfixExpr())
     }
@@ -192,6 +199,12 @@ async getUserInput(prompt) {
       } else if (operator === '/') {
         result /= right
       }
+      this.facts.push({ 
+        type: 'multiplicativeExpression', 
+        operator, 
+        right, 
+        result 
+      })
     }
     return result
   }
@@ -210,7 +223,14 @@ async getUserInput(prompt) {
       } else if (operator === '-') {
         result -= right
       }
-    }
+    this.facts.push({ 
+      type: 'additiveExpression', 
+      operator, 
+      right, 
+      result
+    })
+  }
+    
     return result
   }
 
@@ -228,7 +248,14 @@ async getUserInput(prompt) {
       } else if (operator === '<=') {
         result = result <= right
       }
-    }
+    this.facts.push({ 
+      type: 'relationalExpression', 
+      operator, 
+      right, 
+      result
+    })
+  }
+    
     return result
   }
 
@@ -243,7 +270,14 @@ async getUserInput(prompt) {
       } else if (operator === '!=') {
         result = result != right
       }
-    }
+    this.facts.push({ 
+      type: 'equalityExpression', 
+      operator, 
+      right, 
+      result
+    })
+  }
+    
     return result
   }
 
@@ -308,6 +342,12 @@ async getUserInput(prompt) {
 
     this.environment[name] = value
 
+    this.facts.push({
+      type: 'letStatement',
+      name: name,
+      value: value
+    })
+
     return value
   }
   visitConstStatement(ctx) {
@@ -323,7 +363,12 @@ async getUserInput(prompt) {
       writable: false,
       configurable: false
     });
-  
+
+    this.facts.push({
+      type: 'constStatement',
+      name: name,
+      value: value
+    })
     return value;
   }
   
@@ -333,7 +378,12 @@ async getUserInput(prompt) {
   
     // Permitir la redeclaración en var
     this.environment[name] = value;
-  
+
+    this.facts.push({
+      type: 'varStatement',
+      name: name,
+      value: value
+    })
     return value;
   }
 

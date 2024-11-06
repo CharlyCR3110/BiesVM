@@ -55,14 +55,12 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
    * @memberof InpInstruction
    */
 async getUserInput(prompt) {
-  // Importando readline dinámicamente con import()
   const readline = (await import('readline')).createInterface({
     input: process.stdin,
     output: process.stdout
   });
 
   return new Promise((resolve) => {
-    // Ask the user for input
     readline.question(prompt, (value) => {
       readline.close();
       resolve(value); // Resolve the promise with the user input
@@ -72,6 +70,7 @@ async getUserInput(prompt) {
 
   visitIdentifier (ctx) {
     const name = ctx.getText()
+    console.log('Name: ',name)
     let env = this.environment
     while (env !== null) {
       if (env[name] !== undefined) {
@@ -82,7 +81,7 @@ async getUserInput(prompt) {
     if (name === 'print') {
       return console.log
     } else if (name === 'input') {
-      return async (prompt) => await this.getUserInput(prompt || "Enter input: ")
+      return (prompt) => this.getUserInput(prompt || "Enter input: ").then(value => value);
     } else if (name === 'int') {
       return (value) => {
         const num = parseInt(value, 10);
@@ -105,12 +104,14 @@ async getUserInput(prompt) {
   }
 
   visitPrimaryExpr (ctx) {
+    console.log("Primary expression:", ctx.getText());
     const handlers = [
       { condition: () => ctx.identifier(), handler: () => this.visitIdentifier(ctx.identifier()) },
       { condition: () => ctx.literal(), handler: () => this.visitLiteral(ctx.literal()) },
       { condition: () => ctx.expression(), handler: () => this.visit(ctx.expression()) },
       { condition: () => ctx.lambdaExpr(), handler: () => this.visitLambdaExpr(ctx.lambdaExpr()) },
-      { condition: () => ctx.letStatement(), handler: () => this.visitLetStatement(ctx.letStatement())}
+      { condition: () => ctx.letStatement(), handler: () => this.visitLetStatement(ctx.letStatement())},
+      { condition: () => ctx.ifThenElseExpr(), handler: () => this.visitIfThenElseExpr(ctx.ifThenElseExpr()) }
       // to add more handlers use this template
       // { condition: () => ctx.<rule>(), handler: () => this.visit<Rule>(ctx.<rule>()) }
     ]
@@ -168,14 +169,18 @@ async getUserInput(prompt) {
     }
   }
 
-  visitPowerExpr (ctx) {
-    let result = this.visit(ctx.unaryExpr(0))
-    for (let i = 1; i < ctx.unaryExpr().length; i++) {
-      const right = this.visit(ctx.powerExpr(i))
-      result = Math.pow(result, right)
+  visitPowerExpr(ctx) {
+    let result = this.visit(ctx.unaryExpr(0)); 
+    // Si hay operadores '**' y procesamos la recursión
+    const powerExprs = ctx.powerExpr(); // Obtener todas las expresiones de potencia
+    
+    // Si hay operadores '**', las procesamos en orden
+    for (let i = 0; i < powerExprs.length; i++) {
+        const right = this.visit(powerExprs[i]); // Obtener el operando derecho de la potencia
+        result = Math.pow(result, right); // Aplicar la potencia
     }
-    return result
-  }
+    return result;
+}
 
   visitMultiplicativeExpr (ctx) {
     let result = this.visit(ctx.powerExpr(0))
@@ -332,9 +337,9 @@ async getUserInput(prompt) {
     return value;
   }
 
-  visitLambdaExpr (ctx) {
+  visitLambdaExpr(ctx) {
     const params = ctx.paramList() ? ctx.paramList().identifier().map(id => id.getText()) : []
-    const body = ctx.expression()
+    const body = ctx.expression() || ctx.letInExpr()
     const self = this
     const func = function () {
       const newEnv = Object.create(self.environment)
@@ -343,11 +348,17 @@ async getUserInput(prompt) {
       }
       const oldEnv = self.environment
       self.environment = newEnv
-      const result = self.visit(body)
+      let result
+      if (body) {
+        if (ctx.letInExpr()) {
+          result = self.visit(ctx.letInExpr()) 
+        } else {
+          result = self.visit(body)
+        }
+      }
       self.environment = oldEnv
       return result
     }
-
     return func
   }
 
@@ -366,20 +377,11 @@ async getUserInput(prompt) {
     return result
   }
   visitIfThenElseExpr(ctx) {
-    // Extrae la condición y las expresiones 'then' y 'else'
-    const condition = this.visit(ctx.expression(0)); // Evaluar la expresión de condición
-    const thenExpression = this.visit(ctx.expression(1)); // Evaluar la expresión 'then'
-    const elseExpression = this.visit(ctx.expression(2)); // Evaluar la expresión 'else'
+    const condition = this.visit(ctx.expression(0));
 
-    // Generar el código
-    const code = `
-      if (${condition}) {
-        ${thenExpression};
-      } else {
-        ${elseExpression};
-      }
-    `;
+    const thenExpression = this.visit(ctx.expression(1));
+    const elseExpression = this.visit(ctx.expression(2));
 
-    return code.trim(); // Retorna el código generado
-  }
+    return condition ? thenExpression : elseExpression;
+}
 }

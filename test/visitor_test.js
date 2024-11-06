@@ -65,9 +65,9 @@ let {
 		const greetings = () => 
 		      let {const greet = input("Enter greeting>") 
 			  } in 
-			  if (len(greet) == 0 ) then "Hello World!" else greet
+			  {if (len(greet) == 0 ) then "Hello World!" else greet}
 	} in {
-	    let version = 5 ** 5 / (4 + 1)
+	    let version = 5 ** 2 / (4 + 1)
 		splash("Testing helloworld Version " + version + " ***")
 		print(greetings())
     }		

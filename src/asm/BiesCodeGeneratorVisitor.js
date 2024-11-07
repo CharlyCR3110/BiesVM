@@ -144,14 +144,17 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
       const args = this.visitArgumentList(ctx.argumentList())
       if (typeof func === 'function') {
         return func(...args)
+      } else if (func.type === 'function') {
+        // Execute the function with the arguments
+        return this.visit(func.body, args)
       } else {
-        throw new Error('Intento de llamar a un valor no función')
+        throw new Error('Attempted to call a non-function')
       }
     } else {
       if (typeof func === 'function') {
         return func()
       } else {
-        throw new Error('Intento de llamar a un valor no función')
+        throw new Error('Attempted to call a non-function')
       }
     }
   }
@@ -389,24 +392,28 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     const params = ctx.paramList() ? ctx.paramList().identifier().map(id => id.getText()) : []
     const body = ctx.expression() || ctx.letInExpr()
     const self = this
+
     const func = function () {
-      const newEnv = Object.create(self.environment)
+      // Crear un nuevo entorno clonando el entorno actual para evitar conflictos de propiedades de solo lectura
+      const newEnv = Object.assign({}, self.environment)
+
+      // Asignar los parámetros al nuevo entorno
       for (let i = 0; i < arguments.length; i++) {
         newEnv[params[i]] = arguments[i]
       }
+      // Guardar el entorno anterior y reemplazarlo temporalmente con el nuevo entorno
       const oldEnv = self.environment
       self.environment = newEnv
       let result
       if (body) {
-        if (ctx.letInExpr()) {
-          result = self.visit(ctx.letInExpr())
-        } else {
-          result = self.visit(body)
-        }
+        // Evaluar la expresión lambda con el nuevo entorno
+        result = ctx.letInExpr() ? self.visit(ctx.letInExpr()) : self.visit(body)
       }
+      // Restaurar el entorno anterior
       self.environment = oldEnv
       return result
     }
+
     return func
   }
 

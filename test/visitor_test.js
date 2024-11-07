@@ -60,7 +60,7 @@ let {
     {
       description: 'Extra Complex Version 6 with Max Function',
       code: `// Version Extra compleja 6 Maximo entre dos números, lambda binaria
-let max = (a, b) => if (a > b) then a else b
+let max = (x, y) => if (x > y) then x else y
 let {
   const x = 10
   const y = 20

@@ -1,5 +1,4 @@
 import BiesVMVisitor from '../asm/grammar/.antlr/BiesCVisitor.js'
-import readline from 'readline'
 
 /**
  * Visitor class to handle BIES language constructs and build intermediate representations.
@@ -20,7 +19,7 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
   constructor () {
     super()
     this.environment = {}
-    this.facts= []
+    this.facts = []
   }
 
   /**
@@ -36,50 +35,48 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     }
   }
 
-  *factsGenerator() {
+  * factsGenerator () {
     for (const fact of this.facts) {
-      yield fact;
+      yield fact
     }
   }
 
   visitLiteral (ctx) {
-    const literal = ctx.BOOL_LITERAL() 
+    const literal = ctx.BOOL_LITERAL()
       ? ctx.BOOL_LITERAL().getText()
-      : ctx.STRING_LITERAL() 
+      : ctx.STRING_LITERAL()
         ? ctx.STRING_LITERAL().getText().slice(1, -1)
         : parseFloat(ctx.NUMBER_LITERAL().getText())
-        
+
     this.facts.push({ type: 'literal', value: literal })
     return literal
   }
 
-  
-
-/**
+  /**
    * Helper method to get user input from the console.
    * This method returns a promise that resolves with the user's input.
    * @returns {Promise<string>} A promise that resolves to the user input.
    * @memberof InpInstruction
    */
-async getUserInput(prompt) {
-  const readline = (await import('readline')).createInterface({
-    input: process.stdin,
-    output: process.stdout
-  });
+  async getUserInput (prompt) {
+    const readline = (await import('readline')).createInterface({
+      input: process.stdin,
+      output: process.stdout
+    })
 
-  return new Promise((resolve) => {
-    readline.question(prompt, (value) => {
-      readline.close();
-      resolve(value); // Resolve the promise with the user input
-    });
-  });
-}
+    return new Promise((resolve) => {
+      readline.question(prompt, (value) => {
+        readline.close()
+        resolve(value) // Resolve the promise with the user input
+      })
+    })
+  }
 
   visitIdentifier (ctx) {
     const name = ctx.getText()
-    console.log('Name: ',name)
+    console.log('Name: ', name)
     let env = this.environment
-    this.facts.push({ type: 'identifier', name });
+    this.facts.push({ type: 'identifier', name })
     while (env !== null) {
       if (env[name] !== undefined) {
         return env[name]
@@ -89,36 +86,36 @@ async getUserInput(prompt) {
     if (name === 'print') {
       return console.log
     } else if (name === 'input') {
-      return async (prompt) => this.getUserInput(prompt || "Enter input: ").then(value => value);
+      return async (prompt) => this.getUserInput(prompt || 'Enter input: ').then(value => value)
     } else if (name === 'int') {
       return (value) => {
-        const num = parseInt(value, 10);
-        if (isNaN(num)) throw new Error(`int: No se pudo convertir '${value}' a número`);
-        return num;
-      };
+        const num = parseInt(value, 10)
+        if (isNaN(num)) throw new Error(`int: No se pudo convertir '${value}' a número`)
+        return num
+      }
     } else if (name === 'str') {
-      return (value) => String(value);
+      return (value) => String(value)
     } else if (name === 'len') {
       return (value) => {
-        if (typeof value === "string" || Array.isArray(value)) {
-          return value.length;
+        if (typeof value === 'string' || Array.isArray(value)) {
+          return value.length
         } else {
-          throw new Error(`len: Tipo no soportado para 'len'`);
+          throw new Error('len: Tipo no soportado para \'len\'')
         }
-      };
+      }
     } else {
-      throw new Error(`Variable o función '${name}' no definida`);
+      throw new Error(`Variable o función '${name}' no definida`)
     }
   }
 
   visitPrimaryExpr (ctx) {
-    console.log("Primary expression:", ctx.getText());
+    console.log('Primary expression:', ctx.getText())
     const handlers = [
       { condition: () => ctx.identifier(), handler: () => this.visitIdentifier(ctx.identifier()) },
       { condition: () => ctx.literal(), handler: () => this.visitLiteral(ctx.literal()) },
       { condition: () => ctx.expression(), handler: () => this.visit(ctx.expression()) },
       { condition: () => ctx.lambdaExpr(), handler: () => this.visitLambdaExpr(ctx.lambdaExpr()) },
-      { condition: () => ctx.letStatement(), handler: () => this.visitLetStatement(ctx.letStatement())},
+      { condition: () => ctx.letStatement(), handler: () => this.visitLetStatement(ctx.letStatement()) },
       { condition: () => ctx.ifThenElseExpr(), handler: () => this.visitIfThenElseExpr(ctx.ifThenElseExpr()) }
       // to add more handlers use this template
       // { condition: () => ctx.<rule>(), handler: () => this.visit<Rule>(ctx.<rule>()) }
@@ -169,11 +166,11 @@ async getUserInput(prompt) {
       const operator = ctx.getChild(0).getText()
       const value = this.visit(ctx.unaryExpr())
       const result = operator === '!' ? !value : -value
-      this.facts.push({ 
-        type: 'unaryExpression', 
-        operator, 
-        value, 
-        result 
+      this.facts.push({
+        type: 'unaryExpression',
+        operator,
+        value,
+        result
       })
       return result
     } else {
@@ -181,18 +178,18 @@ async getUserInput(prompt) {
     }
   }
 
-  visitPowerExpr(ctx) {
-    let result = this.visit(ctx.unaryExpr(0)); 
+  visitPowerExpr (ctx) {
+    let result = this.visit(ctx.unaryExpr(0))
     // Si hay operadores '**' y procesamos la recursión
-    const powerExprs = ctx.powerExpr(); // Obtener todas las expresiones de potencia
-    
+    const powerExprs = ctx.powerExpr() // Obtener todas las expresiones de potencia
+
     // Si hay operadores '**', las procesamos en orden
     for (let i = 0; i < powerExprs.length; i++) {
-        const right = this.visit(powerExprs[i]); // Obtener el operando derecho de la potencia
-        result = Math.pow(result, right); // Aplicar la potencia
+      const right = this.visit(powerExprs[i]) // Obtener el operando derecho de la potencia
+      result = Math.pow(result, right) // Aplicar la potencia
     }
-    return result;
-}
+    return result
+  }
 
   visitMultiplicativeExpr (ctx) {
     let result = this.visit(ctx.powerExpr(0))
@@ -204,11 +201,11 @@ async getUserInput(prompt) {
       } else if (operator === '/') {
         result /= right
       }
-      this.facts.push({ 
-        type: 'multiplicativeExpression', 
-        operator, 
-        right, 
-        result 
+      this.facts.push({
+        type: 'multiplicativeExpression',
+        operator,
+        right,
+        result
       })
     }
     return result
@@ -228,14 +225,13 @@ async getUserInput(prompt) {
       } else if (operator === '-') {
         result -= right
       }
-    this.facts.push({ 
-      type: 'additiveExpression', 
-      operator, 
-      right, 
-      result
-    })
-  }
-    
+      this.facts.push({
+        type: 'additiveExpression',
+        operator,
+        right,
+        result
+      })
+    }
     return result
   }
 
@@ -253,14 +249,13 @@ async getUserInput(prompt) {
       } else if (operator === '<=') {
         result = result <= right
       }
-    this.facts.push({ 
-      type: 'relationalExpression', 
-      operator, 
-      right, 
-      result
-    })
-  }
-    
+      this.facts.push({
+        type: 'relationalExpression',
+        operator,
+        right,
+        result
+      })
+    }
     return result
   }
 
@@ -275,14 +270,13 @@ async getUserInput(prompt) {
       } else if (operator === '!=') {
         result = result != right
       }
-    this.facts.push({ 
-      type: 'equalityExpression', 
-      operator, 
-      right, 
-      result
-    })
-  }
-    
+      this.facts.push({
+        type: 'equalityExpression',
+        operator,
+        right,
+        result
+      })
+    }
     return result
   }
 
@@ -311,15 +305,15 @@ async getUserInput(prompt) {
   }
 
   visitStatement (ctx) {
-    console.log("Tipo de declaración:", ctx.getText());
+    console.log('Tipo de declaración:', ctx.getText())
     const handlers = [
       { condition: () => ctx.letStatement(), handler: () => this.visit(ctx.letStatement()) },
       { condition: () => ctx.constStatement(), handler: () => this.visit(ctx.constStatement()) },
       { condition: () => ctx.varStatement(), handler: () => this.visit(ctx.varStatement()) },
       { condition: () => ctx.funDeclaration(), handler: () => this.visit(ctx.funDeclaration()) },
       { condition: () => ctx.expressionStatement(), handler: () => this.visit(ctx.expressionStatement()) },
-      { condition: () => ctx.letInExpr(), handler: () => this.visit(ctx.letInExpr())},
-      { condition: () => ctx.ifThenElseExpr(), handler: () => this.visit(ctx.ifThenElseExpr())}
+      { condition: () => ctx.letInExpr(), handler: () => this.visit(ctx.letInExpr()) },
+      { condition: () => ctx.ifThenElseExpr(), handler: () => this.visit(ctx.ifThenElseExpr()) }
     ]
 
     for (const { condition, handler } of handlers) {
@@ -355,44 +349,43 @@ async getUserInput(prompt) {
 
     return value
   }
-  visitConstStatement(ctx) {
-    const name = ctx.identifier().getText();
-    const value = this.visit(ctx.expression());
-  
+
+  visitConstStatement (ctx) {
+    const name = ctx.identifier().getText()
+    const value = this.visit(ctx.expression())
     if (this.environment[name] !== undefined) {
-      throw new Error(`Variable ${name} ya definida`);
+      throw new Error(`Variable ${name} ya definida`)
     }
-  
     Object.defineProperty(this.environment, name, {
       value,
       writable: false,
       configurable: false
-    });
+    })
 
     this.facts.push({
       type: 'constStatement',
       name: name,
       value: value
     })
-    return value;
+    return value
   }
-  
-  visitVarStatement(ctx) {
-    const name = ctx.identifier().getText();
-    const value = this.visit(ctx.expression());
-  
+
+  visitVarStatement (ctx) {
+    const name = ctx.identifier().getText()
+    const value = this.visit(ctx.expression())
+
     // Permitir la redeclaración en var
-    this.environment[name] = value;
+    this.environment[name] = value
 
     this.facts.push({
       type: 'varStatement',
       name: name,
       value: value
     })
-    return value;
+    return value
   }
 
-  visitLambdaExpr(ctx) {
+  visitLambdaExpr (ctx) {
     const params = ctx.paramList() ? ctx.paramList().identifier().map(id => id.getText()) : []
     const body = ctx.expression() || ctx.letInExpr()
     const self = this
@@ -406,7 +399,7 @@ async getUserInput(prompt) {
       let result
       if (body) {
         if (ctx.letInExpr()) {
-          result = self.visit(ctx.letInExpr()) 
+          result = self.visit(ctx.letInExpr())
         } else {
           result = self.visit(body)
         }
@@ -417,27 +410,26 @@ async getUserInput(prompt) {
     return func
   }
 
-    // Agrega este método a tu clase BiesCodeGeneratorVisitor
-  visitLetInExpr(ctx) {
+  // Agrega este método a tu clase BiesCodeGeneratorVisitor
+  visitLetInExpr (ctx) {
     const environmentBackup = { ...this.environment } // Guardar el entorno actual para restaurarlo después
     // Procesar todas las declaraciones dentro de let {...}
     const statements = ctx.constStatement() || ctx.letStatement() || ctx.varStatement()
     for (const stmt of statements) {
       this.visit(stmt) // Procesa cada declaración
     }
-  
     // Procesar la expresión final en 'in { ... }'
-    const result = this.visit(ctx.expression());
+    const result = this.visit(ctx.expression())
     this.environment = environmentBackup // Restaurar el entorno original
     return result
   }
-  visitIfThenElseExpr(ctx) {
-    const condition = this.visit(ctx.expression(0));
 
-    const thenExpression = this.visit(ctx.expression(1));
-    const elseExpression = this.visit(ctx.expression(2));
+  visitIfThenElseExpr (ctx) {
+    const condition = this.visit(ctx.expression(0))
 
-    return condition ? thenExpression : elseExpression;
-}
+    const thenExpression = this.visit(ctx.expression(1))
+    const elseExpression = this.visit(ctx.expression(2))
 
+    return condition ? thenExpression : elseExpression
+  }
 }

@@ -103,7 +103,10 @@ primaryExpr
 
 // Lambdas anónimas
 lambdaExpr
-    : '(' paramList? ')' '=>' (expression | letInExpr)
+    //: '(' paramList? ')' '=>' (expression | letInExpr)
+    //: '(' paramList? ')' '=>' (lambdaExpr | expression | letInExpr)
+    : '(' paramList? ')' '=>' (lambdaExpr | expression | letInExpr)  
+    | identifier '=>' expression        
     ;
 
 // Expresión 'let-in'

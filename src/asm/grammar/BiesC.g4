@@ -99,17 +99,22 @@ primaryExpr
     | blockExpr
     | ifThenElseExpr
     | letStatement
+    | arrayAccess
     ;
 
 // Lambdas anónimas
 lambdaExpr
-    : '(' paramList? ')' '=>' (expression | letInExpr)
+    : '(' paramList? ')' '=>' (expression | letInExpr | ifThenElseExpr)
     ;
 
 // Expresión 'let-in'
 letInExpr
     : 'let' '{' (constStatement | letStatement | varStatement)* '}' 'in' '{'? expression * '}'?
     ;
+
+arrayAccess
+  : IDENTIFIER '[' expression ']'   
+  ;
 
 // Bloque de expresiones
 blockExpr

@@ -89,6 +89,28 @@ let {
 	print(max(x, y))
 }
 `
+const inputProgram08 = `
+// Version Extra compleja 8 Acceso a un elemento de una lista
+let {const a = [1, 2, 3, "Hello World!", 5, 6, 7]
+	} in {
+	print("*** Testing List Access ("+ a + ") ***")
+	print(a[ a[0] + 2 ])
+}
+`
+
+const inputProgram09 = `
+// Version Extra compleja 9 Largo de una lista (iterativo) lambda multi_argumento. Lambda derivada
+let sumList = (a, from, to, s) => if (from == to) then s else sumList(a, from + 1, to, a[from] + s)
+let sumListShort = (a, n) => sumList(a, 0, n, 0)
+let {const a = [1, 2, 3, 4, 5]
+	 const from = 0
+	 const to = 3 
+	} in {
+	print("*** Testing sumList("+ a + " ," + from + ", " + to + ") ***")
+	print(sumList(a, from, to, 0) )
+	print(sumListShort(a, to))
+}
+`
 
 try {
   console.log('Testing visitor...')
@@ -104,9 +126,11 @@ try {
   console.log('----'.repeat(10))
   testVisitor(inputProgram04)
   console.log('----'.repeat(10))
-  testVisitor(inputProgram05)
+  // testVisitor(inputProgram05)
   console.log('----'.repeat(10))
   testVisitor(inputProgram06)
+  console.log('----'.repeat(10))
+  testVisitor(inputProgram09)
 } catch (e) {
   console.error(e)
 }

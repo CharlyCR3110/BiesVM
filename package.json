@@ -2,14 +2,14 @@
   "name": "biesvm",
   "version": "1.0.0",
   "description": "Bies virtual machine",
-  "main": "index.js",
+  "main": "src\\main.js",
   "type": "module",
   "scripts": {
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",
     "doc": "jsdoc -c jsdoc.json",
     "lint": "standard --fix",
     "antlr": "src\\asm\\grammar\\generate_parser.bat",
-    "start": "node --experimental-vm-modules index.js",
+    "start": "node --experimental-vm-modules src\\main.js",
     "quick_test": "npm run antlr && node test\\visitor_test.js"
   },
   "keywords": [],

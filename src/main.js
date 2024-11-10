@@ -5,6 +5,11 @@ import { mapInputFileNameToOutputFileName, validateInputFilename } from './helpe
 
 const inputFilename = validateInputFilename(process.argv[2])
 
-const sourceCode = fs.readFileSync(`${INPUT_FOLDER_PATH}/${inputFilename}`, 'utf8')
-const outputFilename = mapInputFileNameToOutputFileName(inputFilename)
-generateBasm(sourceCode, outputFilename)
+try {
+  const sourceCode = fs.readFileSync(`${INPUT_FOLDER_PATH}/${inputFilename}`, 'utf8')
+  const outputFilename = mapInputFileNameToOutputFileName(inputFilename)
+  generateBasm(sourceCode, outputFilename)
+} catch (error) {
+  console.error('Parece que hubo un error al leer el archivo de entrada.')
+  console.error('Asegúrate de que el archivo exista y esté en la carpeta `input_files`')
+}

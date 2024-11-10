@@ -1,4 +1,5 @@
 // Version compleja 1
 let splash = () => print("Testing helloworld Version 1 ***")
 splash()
+var x = 1
 print("Hello World!")

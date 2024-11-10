@@ -30,6 +30,29 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     })
   }
 
+  visitPrimaryExpr (ctx) {
+    // console.log("Primary expression:", ctx.getText());
+    const handlers = [
+      { condition: () => ctx.identifier(), handler: () => this.visitIdentifier(ctx.identifier()) },
+      { condition: () => ctx.literal(), handler: () => this.visitLiteral(ctx.literal()) },
+      { condition: () => ctx.expression(), handler: () => this.visit(ctx.expression()) },
+      { condition: () => ctx.lambdaExpr(), handler: () => this.visitLambdaExpr(ctx.lambdaExpr()) },
+      { condition: () => ctx.letStatement(), handler: () => this.visitLetStatement(ctx.letStatement()) },
+      { condition: () => ctx.ifThenElseExpr(), handler: () => this.visitIfThenElseExpr(ctx.ifThenElseExpr()) },
+      { condition: () => ctx.listExpr(), handler: () => this.visitListExpr(ctx.listExpr()) },
+      { condition: () => ctx.arrayAccess, handler: () => this.visitArrayAccess(ctx.arrayAccess()) }
+      // to add more handlers use this template
+      // { condition: () => ctx.<rule>(), handler: () => this.visit<Rule>(ctx.<rule>()) }
+    ]
+
+    for (const { condition, handler } of handlers) {
+      if (condition()) {
+        return handler()
+      }
+    }
+    throw new Error(`Expresión primaria no soportada aún: ${ctx.getText()}`)
+  }
+
   generateLabel (prefix = 'L') {
     return `${prefix}${this.labelCount++}`
   }
@@ -228,7 +251,7 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     args.forEach(arg => {
     // Si el argumento es una cadena (entre comillas dobles o simples)
       if ((arg.startsWith('"') && arg.endsWith('"')) || (arg.startsWith("'") && arg.endsWith("'"))) {
-        const formattedArg = arg.replace(/^["'](.*)["']$/, "'$1'")
+        const formattedArg = arg.replace(/^['"](.*)['"]$/, '"$1"')
         this.emit(`LDV ${formattedArg}`)
       } else {
         this.emit(`LDV ${arg}`)
@@ -400,9 +423,6 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     return result // El resultado estará en la cima de la pila
   } */
 
-  visitPrimaryExpr (ctx) {
-    return this.visitChildren(ctx)
-  }
 
   visitArgumentList (ctx) {
     return this.visitChildren(ctx)

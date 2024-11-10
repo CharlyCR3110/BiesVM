@@ -1,5 +1,4 @@
-let x = 10
-const y = 20
-fun add(a, b) => a + b
-let result = add(x, y)
-print(result)
+// Version compleja 1
+let splash = () => print("Testing helloworld Version 1 ***")
+splash()
+print("Hello World!")

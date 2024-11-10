@@ -408,7 +408,7 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     return this.visitChildren(ctx)
   }
 
-  writeToFile (filename = 'output.basm') {
+  writeToFile (filename) {
     const basmContent = this.instructions.join('\n')
     fs.writeFileSync(filename, basmContent, 'utf8')
     console.log(`.basm file generated: ${filename}`)

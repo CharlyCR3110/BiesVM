@@ -9,15 +9,12 @@ function testVisitor (input) {
   const tree = parse(input)
 
   const visitor = new BiesCodeGeneratorVisitor()
-  const result = visitor.visit(tree) // Visita el árbol de análisis
+  visitor.visit(tree) // Visita el árbol de análisis
 
-  console.log('Resultados de factsGenerator:');
+  console.log('Resultados de factsGenerator:')
   for (const fact of visitor.factsGenerator()) {
-    console.log(fact);  // Imprimimos cada hecho generado
+    console.log(fact) // Imprimimos cada hecho generado
   }
-
-  console.log('Resultado de la visita al árbol:')
-  console.log(result) // undefined porque de momento no se retorna nada (la branch de raque lo tiene diferente por si acaso)
 }
 
 // Ejemplo de entrada para probar
@@ -61,7 +58,6 @@ let {
 		print(greetings()) 
 	}
 `
-
 
 const inputProgram05 = `
 // Version compleja 5 let-in
@@ -130,23 +126,23 @@ try {
   console.log('----'.repeat(10))
   testVisitor(inputProgram00)
   console.log('----'.repeat(10))
-  testVisitor(inputProgram01)
-  console.log('----'.repeat(10))
-  testVisitor(inputProgram02)
-  console.log('----'.repeat(10))
-  testVisitor(inputProgram03)
-  console.log('----'.repeat(10))
-  testVisitor(inputProgram04)
-  console.log('----'.repeat(10))
-  //testVisitor(inputProgram05)
-  console.log('----'.repeat(10))
-  testVisitor(inputProgram06)
-  console.log('----'.repeat(10))
-  testVisitor(inputProgram07)
-  console.log('----'.repeat(10))
-  testVisitor(inputProgram08)
-  console.log('----'.repeat(10))
-  testVisitor(inputProgram09)
+  // testVisitor(inputProgram01)
+  // console.log('----'.repeat(10))
+  // testVisitor(inputProgram02)
+  // console.log('----'.repeat(10))
+  // testVisitor(inputProgram03)
+  // console.log('----'.repeat(10))
+  // testVisitor(inputProgram04)
+  // console.log('----'.repeat(10))
+  // //testVisitor(inputProgram05)
+  // console.log('----'.repeat(10))
+  // testVisitor(inputProgram06)
+  // console.log('----'.repeat(10))
+  // testVisitor(inputProgram07)
+  // console.log('----'.repeat(10))
+  // testVisitor(inputProgram08)
+  // console.log('----'.repeat(10))
+  // testVisitor(inputProgram09)
 } catch (e) {
   console.error(e)
 }

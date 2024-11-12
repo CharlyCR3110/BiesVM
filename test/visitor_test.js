@@ -80,7 +80,7 @@ let {
 
 const inputProgram06 = `
 // Version Extra compleja 6 Maximo entre dos números, lambda binaria
-let max = (a, b) => if (a > b) then a else b
+let max = (x, y) => if (x > y) then x else y
 let {
 	const x = 10
 	const y = 20
@@ -89,6 +89,18 @@ let {
 	print(max(x, y))
 }
 `
+const inputProgram07 = `
+// Version Extra compleja 7 Maximo entre dos números, lambda anidada
+let max = x => y => if (x > y) then x else y
+let {
+	const x = 10
+	const y = 20
+} in {
+	print("*** Testing max("+ x + " ," + y + ") ***")
+	//  print(max(x)(y))
+}
+`
+
 const inputProgram08 = `
 // Version Extra compleja 8 Acceso a un elemento de una lista
 let {const a = [1, 2, 3, "Hello World!", 5, 6, 7]
@@ -126,9 +138,13 @@ try {
   console.log('----'.repeat(10))
   testVisitor(inputProgram04)
   console.log('----'.repeat(10))
-  // testVisitor(inputProgram05)
+  //testVisitor(inputProgram05)
   console.log('----'.repeat(10))
   testVisitor(inputProgram06)
+  console.log('----'.repeat(10))
+  testVisitor(inputProgram07)
+  console.log('----'.repeat(10))
+  testVisitor(inputProgram08)
   console.log('----'.repeat(10))
   testVisitor(inputProgram09)
 } catch (e) {

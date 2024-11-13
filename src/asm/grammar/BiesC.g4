@@ -82,7 +82,7 @@ postfixExpr
     ;
 
 postfixOp
-    : '(' argumentList? ')'     # FunctionCall
+    : '(' argumentList? ')'    
     ;
 
 argumentList
@@ -106,7 +106,6 @@ lambdaExpr
     //: '(' paramList? ')' '=>' (expression | letInExpr)
     //: '(' paramList? ')' '=>' (lambdaExpr | expression | letInExpr)
     : '(' paramList? ')' '=>' (lambdaExpr | expression | letInExpr)  
-    | identifier '=>' expression        
     ;
 
 // Expresión 'let-in'

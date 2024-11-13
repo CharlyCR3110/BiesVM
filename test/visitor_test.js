@@ -72,14 +72,9 @@ let {
     {
       description: 'Extra Complex Version 7 with Nested Lambda Max Function',
       code: `// Version Extra compleja 7 Maximo entre dos números, lambda anidada
-    let max = x => y => if (x > y) then x else y
-    let {
-      const x = 10
-      const y = 20
-    } in {
-      print("*** Testing max("+ x + " ," + y + ") ***")
-      print(max(x)(y))
-    }`
+    let max = (x) => (y) => if (x > y) then x else y
+    print(max(20)(10))
+   `
     }
   ]
   for (const testInput of testInputs) {

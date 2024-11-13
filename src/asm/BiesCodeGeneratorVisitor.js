@@ -20,6 +20,7 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     super()
     this.environment = {}
     this.facts = []
+    this.temp = []
   }
 
   /**
@@ -130,34 +131,112 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     throw new Error(`Expresión primaria no soportada aún: ${ctx.getText()}`)
   }
 
-  visitPostfixExpr (ctx) {
-    let result = this.visit(ctx.primaryExpr())
-    const postfixOps = ctx.postfixOp()
-    for (const op of postfixOps) {
-      result = this.visitPostfixOp(op, result)
-    }
-    return result
-  }
+  // -----------------------------------------
 
-  visitPostfixOp (ctx, func) {
-    if (ctx.argumentList()) {
-      const args = this.visitArgumentList(ctx.argumentList())
-      if (typeof func === 'function') {
-        return func(...args)
-      } else if (func.type === 'function') {
-        // Execute the function with the arguments
-        return this.visit(func.body, args)
+// Función visitPostfixExpr: procesar la expresión postfix
+visitPostfixExpr(ctx) {
+  // Primero evaluamos la expresión primaria
+  let result = this.visit(ctx.primaryExpr());
+  const postfixOps = ctx.postfixOp();
+
+  // Procesamos cada operación postfix pasando el resultado acumulado
+  for (const op of postfixOps) {
+      result = this.visitPostfixOp(op, result);  // Pasamos el contexto y el resultado actual
+  }
+  
+  return result;
+}
+
+visitPostfixOp(ctx, func) {
+  console.log("IN FIX OP");
+
+  // Si hay una lista de argumentos (es una llamada a función)
+  if (ctx.argumentList()) {
+    const args = this.visitArgumentList(ctx.argumentList());
+    console.log("arg:", ...args);
+    console.log("func:", func);
+
+    // Si hay funciones almacenadas en 'temp', las aplicamos
+    if (this.temp.length !== 0) {
+      const y = this.temp.pop(); // Tomamos la última función almacenada
+      console.log('y---->', y);  // Imprimimos la función tomada
+      return y(...args); // Aplicamos la función con los argumentos y retornamos el resultado
+    }
+
+    // Verificamos si 'func' es una función
+    if (typeof func === 'function') {
+      const result = func(...args);
+      console.log("Result::", result);
+
+      // Si la función retorna otra función, la almacenamos para aplicar más tarde
+      if (typeof result === 'function') {
+        console.log("PUSHH");
+        this.temp.push(result); // Guardamos la nueva función
+        return console.log("222"); // Devolvemos una función identidad para continuar la ejecución
       } else {
-        throw new Error('Attempted to call a non-function')
+        return result; // Si no es una función, devolvemos el resultado de la ejecución
       }
     } else {
-      if (typeof func === 'function') {
-        return func()
-      } else {
-        throw new Error('Attempted to call a non-function')
-      }
+      console.error("Error: Attempted to call a non-function:", func); // Error si 'func' no es una función
+      throw new Error(`Attempted to call a non-function: ${func}`);
+    }
+  } else {
+    // Si no hay argumentos, es una lambda sin argumentos, simplemente la llamamos
+    console.log("Lambda function with no arguments, calling:", func);
+
+    if (typeof func === 'function') {
+      console.log("Funcion sola")
+      return func(); // Llamamos a la función sin argumentos
+    } else {
+      console.error("Error: Attempted to call a non-function:", func); // Error si 'func' no es una función
+      throw new Error(`Attempted to call a non-function: ${func}`);
     }
   }
+}
+
+
+
+
+// Función visitLambdaExpr: manejar la expresión lambda
+visitLambdaExpr(ctx) {
+  // Extraemos los parámetros de la lambda
+  const params = ctx.paramList() ? ctx.paramList().identifier().map(id => id.getText()) : [];
+  const body = ctx.expression() || ctx.letInExpr();
+  const self = this;
+
+  // Definimos la función lambda
+  const func = function () {
+      // Clonamos el entorno actual para evitar conflictos
+      const newEnv = Object.assign({}, self.environment);
+
+      // Asignamos los parámetros al nuevo entorno
+      for (let i = 0; i < arguments.length; i++) {
+          newEnv[params[i]] = arguments[i];
+      }
+
+      // Temporalmente cambiamos al nuevo entorno y evaluamos el cuerpo
+      const oldEnv = self.environment;
+      self.environment = newEnv;
+
+      let result;
+      if (body) {
+          // Evaluamos el cuerpo de la expresión lambda
+          result = ctx.letInExpr() ? self.visit(ctx.letInExpr()) : self.visit(body);
+      }
+
+      // Restauramos el entorno antiguo
+      self.environment = oldEnv;
+      return result;
+  };
+
+  // Devolvemos la función lambda
+  return func;
+}
+
+
+
+
+  // -----------------------------------------
 
   visitArgumentList (ctx) {
     const args = ctx.expression().map(expr => this.visit(expr))
@@ -386,35 +465,6 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
       value: value
     })
     return value
-  }
-
-  visitLambdaExpr (ctx) {
-    const params = ctx.paramList() ? ctx.paramList().identifier().map(id => id.getText()) : []
-    const body = ctx.expression() || ctx.letInExpr()
-    const self = this
-
-    const func = function () {
-      // Crear un nuevo entorno clonando el entorno actual para evitar conflictos de propiedades de solo lectura
-      const newEnv = Object.assign({}, self.environment)
-
-      // Asignar los parámetros al nuevo entorno
-      for (let i = 0; i < arguments.length; i++) {
-        newEnv[params[i]] = arguments[i]
-      }
-      // Guardar el entorno anterior y reemplazarlo temporalmente con el nuevo entorno
-      const oldEnv = self.environment
-      self.environment = newEnv
-      let result
-      if (body) {
-        // Evaluar la expresión lambda con el nuevo entorno
-        result = ctx.letInExpr() ? self.visit(ctx.letInExpr()) : self.visit(body)
-      }
-      // Restaurar el entorno anterior
-      self.environment = oldEnv
-      return result
-    }
-
-    return func
   }
 
   // Agrega este método a tu clase BiesCodeGeneratorVisitor

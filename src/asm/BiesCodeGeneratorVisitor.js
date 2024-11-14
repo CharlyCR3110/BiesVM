@@ -86,6 +86,7 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
       }
       env = Object.getPrototypeOf(env)
       // console.log('While...', env)
+      
     }
     if (name === 'print') {
       return console.log
@@ -400,31 +401,40 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
   }
 
   visitLambdaExpr (ctx) {
-    const params = ctx.paramList() ? ctx.paramList().identifier().map(id => id.getText()) : []
+    const params = ctx.paramList() 
+        ? ctx.paramList().identifier().map(id => id.getText()) 
+        : []
     const body = ctx.expression() || ctx.letInExpr()
-    const self = this
+    const self  = this
+    console.log(`Parametros del lambda`,params)
+    const oldEnv = self.environment
     const func = function () {
-      const newEnv = Object.assign({}, self.environment)
+
+      console.log("Function arguments:", arguments)
+      const newEnv = Object.assign({},oldEnv)
       for (let i = 0; i < arguments.length; i++) {
         newEnv[params[i]] = arguments[i]
+        console.log(newEnv[params[i]], params[i])
       }
-      const oldEnv = self.environment
+      
+      console.log('Old environment',oldEnv)
       self.environment = newEnv
+      console.log(newEnv)
       let result
       if (body) {
-        // console.log('Body')
         if (ctx.letInExpr()) {
-          // console.log('letin')
           result = self.visit(ctx.letInExpr())
-        } else {
-          // console.log('expresion')
-          // console.log(body.getText())
+        }else{
           result = self.visit(body)
         }
+        self.environment = oldEnv
       }
-      self.environment = oldEnv
+      console.log("Exit function, ", result)
+      console.log("Ultimo environment function", self.environment)
       return result
     }
+    console.log("Exit lambda",func)
+    console.log("Ultimo environment lambda", this.environment)
     return func
   }
 

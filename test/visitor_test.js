@@ -87,13 +87,13 @@ let {
 `
 const inputProgram07 = `
 // Version Extra compleja 7 Maximo entre dos números, lambda anidada
-let max = x => y => if (x > y) then x else y
+let max = (x) => (y) => if (x > y) then x else y
 let {
 	const x = 10
 	const y = 20
 } in {
 	print("*** Testing max("+ x + " ," + y + ") ***")
-	//  print(max(x)(y))
+	print(max(x)(y))
 }
 `
 
@@ -121,28 +121,28 @@ let {const a = [1, 2, 3, 4, 5]
 `
 
 try {
-  console.log('Testing visitor...')
+  // console.log('Testing visitor...')
 
   console.log('----'.repeat(10))
   testVisitor(inputProgram00)
   console.log('----'.repeat(10))
-  // testVisitor(inputProgram01)
-  // console.log('----'.repeat(10))
-  // testVisitor(inputProgram02)
-  // console.log('----'.repeat(10))
-  // testVisitor(inputProgram03)
-  // console.log('----'.repeat(10))
-  // testVisitor(inputProgram04)
-  // console.log('----'.repeat(10))
-  // //testVisitor(inputProgram05)
-  // console.log('----'.repeat(10))
-  // testVisitor(inputProgram06)
-  // console.log('----'.repeat(10))
-  // testVisitor(inputProgram07)
-  // console.log('----'.repeat(10))
-  // testVisitor(inputProgram08)
-  // console.log('----'.repeat(10))
-  // testVisitor(inputProgram09)
+  testVisitor(inputProgram01)
+  console.log('----'.repeat(10))
+  testVisitor(inputProgram02)
+  console.log('----'.repeat(10))
+  testVisitor(inputProgram03)
+  console.log('----'.repeat(10))
+  testVisitor(inputProgram04)
+  console.log('----'.repeat(10))
+  // testVisitor(inputProgram05)
+  console.log('----'.repeat(10))
+  testVisitor(inputProgram06)
+  console.log('----'.repeat(10))
+  testVisitor(inputProgram07)
+  console.log('----'.repeat(10))
+  testVisitor(inputProgram08)
+  console.log('----'.repeat(10))
+  testVisitor(inputProgram09)
 } catch (e) {
   console.error(e)
 }

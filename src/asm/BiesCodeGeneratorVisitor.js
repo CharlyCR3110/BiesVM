@@ -1,4 +1,5 @@
 import BiesVMVisitor from '../asm/grammar/.antlr/BiesCVisitor.js'
+import readline from 'readline'
 
 /**
  * Visitor class to handle BIES language constructs and build intermediate representations.
@@ -20,7 +21,6 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     super()
     this.environment = {}
     this.facts = []
-    this.temp = []
   }
 
   /**
@@ -54,11 +54,11 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
   }
 
   /**
-   * Helper method to get user input from the console.
-   * This method returns a promise that resolves with the user's input.
-   * @returns {Promise<string>} A promise that resolves to the user input.
-   * @memberof InpInstruction
-   */
+     * Helper method to get user input from the console.
+     * This method returns a promise that resolves with the user's input.
+     * @returns {Promise<string>} A promise that resolves to the user input.
+     * @memberof InpInstruction
+     */
   async getUserInput (prompt) {
     const readline = (await import('readline')).createInterface({
       input: process.stdin,
@@ -75,14 +75,18 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
 
   visitIdentifier (ctx) {
     const name = ctx.getText()
-    console.log('Name: ', name)
+    // console.log('Name: ',name)
     let env = this.environment
     this.facts.push({ type: 'identifier', name })
+    // console.log('Estado de environment:', this.environment);
     while (env !== null) {
       if (env[name] !== undefined) {
+        // console.log(env[name])
         return env[name]
       }
       env = Object.getPrototypeOf(env)
+      // console.log('While...', env)
+      
     }
     if (name === 'print') {
       return console.log
@@ -110,14 +114,16 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
   }
 
   visitPrimaryExpr (ctx) {
-    console.log('Primary expression:', ctx.getText())
+    // console.log("Primary expression:", ctx.getText());
     const handlers = [
       { condition: () => ctx.identifier(), handler: () => this.visitIdentifier(ctx.identifier()) },
       { condition: () => ctx.literal(), handler: () => this.visitLiteral(ctx.literal()) },
       { condition: () => ctx.expression(), handler: () => this.visit(ctx.expression()) },
       { condition: () => ctx.lambdaExpr(), handler: () => this.visitLambdaExpr(ctx.lambdaExpr()) },
       { condition: () => ctx.letStatement(), handler: () => this.visitLetStatement(ctx.letStatement()) },
-      { condition: () => ctx.ifThenElseExpr(), handler: () => this.visitIfThenElseExpr(ctx.ifThenElseExpr()) }
+      { condition: () => ctx.ifThenElseExpr(), handler: () => this.visitIfThenElseExpr(ctx.ifThenElseExpr()) },
+      { condition: () => ctx.listExpr(), handler: () => this.visitListExpr(ctx.listExpr()) },
+      { condition: () => ctx.arrayAccess, handler: () => this.visitArrayAccess(ctx.arrayAccess()) }
       // to add more handlers use this template
       // { condition: () => ctx.<rule>(), handler: () => this.visit<Rule>(ctx.<rule>()) }
     ]
@@ -131,112 +137,31 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     throw new Error(`Expresión primaria no soportada aún: ${ctx.getText()}`)
   }
 
-  // -----------------------------------------
-
-// Función visitPostfixExpr: procesar la expresión postfix
-visitPostfixExpr(ctx) {
-  // Primero evaluamos la expresión primaria
-  let result = this.visit(ctx.primaryExpr());
-  const postfixOps = ctx.postfixOp();
-
-  // Procesamos cada operación postfix pasando el resultado acumulado
-  for (const op of postfixOps) {
-      result = this.visitPostfixOp(op, result);  // Pasamos el contexto y el resultado actual
-  }
-  
-  return result;
-}
-
-visitPostfixOp(ctx, func) {
-  console.log("IN FIX OP");
-
-  // Si hay una lista de argumentos (es una llamada a función)
-  if (ctx.argumentList()) {
-    const args = this.visitArgumentList(ctx.argumentList());
-    console.log("arg:", ...args);
-    console.log("func:", func);
-
-    // Si hay funciones almacenadas en 'temp', las aplicamos
-    if (this.temp.length !== 0) {
-      const y = this.temp.pop(); // Tomamos la última función almacenada
-      console.log('y---->', y);  // Imprimimos la función tomada
-      return y(...args); // Aplicamos la función con los argumentos y retornamos el resultado
+  visitPostfixExpr (ctx) {
+    let result = this.visit(ctx.primaryExpr())
+    const postfixOps = ctx.postfixOp()
+    for (const op of postfixOps) {
+      result = this.visitPostfixOp(op, result)
     }
+    return result
+  }
 
-    // Verificamos si 'func' es una función
-    if (typeof func === 'function') {
-      const result = func(...args);
-      console.log("Result::", result);
-
-      // Si la función retorna otra función, la almacenamos para aplicar más tarde
-      if (typeof result === 'function') {
-        console.log("PUSHH");
-        this.temp.push(result); // Guardamos la nueva función
-        return console.log("222"); // Devolvemos una función identidad para continuar la ejecución
+  visitPostfixOp (ctx, func) {
+    if (ctx.argumentList()) {
+      const args = this.visitArgumentList(ctx.argumentList())
+      if (typeof func === 'function') {
+        return func(...args)
       } else {
-        return result; // Si no es una función, devolvemos el resultado de la ejecución
+        throw new Error('Intento de llamar a un valor no función')
       }
     } else {
-      console.error("Error: Attempted to call a non-function:", func); // Error si 'func' no es una función
-      throw new Error(`Attempted to call a non-function: ${func}`);
-    }
-  } else {
-    // Si no hay argumentos, es una lambda sin argumentos, simplemente la llamamos
-    console.log("Lambda function with no arguments, calling:", func);
-
-    if (typeof func === 'function') {
-      console.log("Funcion sola")
-      return func(); // Llamamos a la función sin argumentos
-    } else {
-      console.error("Error: Attempted to call a non-function:", func); // Error si 'func' no es una función
-      throw new Error(`Attempted to call a non-function: ${func}`);
+      if (typeof func === 'function') {
+        return func()
+      } else {
+        throw new Error('Intento de llamar a un valor no función')
+      }
     }
   }
-}
-
-
-
-
-// Función visitLambdaExpr: manejar la expresión lambda
-visitLambdaExpr(ctx) {
-  // Extraemos los parámetros de la lambda
-  const params = ctx.paramList() ? ctx.paramList().identifier().map(id => id.getText()) : [];
-  const body = ctx.expression() || ctx.letInExpr();
-  const self = this;
-
-  // Definimos la función lambda
-  const func = function () {
-      // Clonamos el entorno actual para evitar conflictos
-      const newEnv = Object.assign({}, self.environment);
-
-      // Asignamos los parámetros al nuevo entorno
-      for (let i = 0; i < arguments.length; i++) {
-          newEnv[params[i]] = arguments[i];
-      }
-
-      // Temporalmente cambiamos al nuevo entorno y evaluamos el cuerpo
-      const oldEnv = self.environment;
-      self.environment = newEnv;
-
-      let result;
-      if (body) {
-          // Evaluamos el cuerpo de la expresión lambda
-          result = ctx.letInExpr() ? self.visit(ctx.letInExpr()) : self.visit(body);
-      }
-
-      // Restauramos el entorno antiguo
-      self.environment = oldEnv;
-      return result;
-  };
-
-  // Devolvemos la función lambda
-  return func;
-}
-
-
-
-
-  // -----------------------------------------
 
   visitArgumentList (ctx) {
     const args = ctx.expression().map(expr => this.visit(expr))
@@ -314,6 +239,7 @@ visitLambdaExpr(ctx) {
         result
       })
     }
+
     return result
   }
 
@@ -338,16 +264,19 @@ visitLambdaExpr(ctx) {
         result
       })
     }
+
     return result
   }
 
   visitEqualityExpr (ctx) {
     let result = this.visit(ctx.relationalExpr(0))
+    // console.log(result)
     for (let i = 1; i < ctx.relationalExpr().length; i++) {
       const operator = ctx.getChild(2 * i - 1).getText()
       const right = this.visit(ctx.relationalExpr(i))
       if (operator === '==') {
         /* eslint-disable eqeqeq */
+        // console.log('Eq',result,'==',right)
         result = result == right
       } else if (operator === '!=') {
         result = result != right
@@ -359,6 +288,7 @@ visitLambdaExpr(ctx) {
         result
       })
     }
+    // console.log(result)
     return result
   }
 
@@ -387,7 +317,7 @@ visitLambdaExpr(ctx) {
   }
 
   visitStatement (ctx) {
-    console.log('Tipo de declaración:', ctx.getText())
+    // console.log("Tipo de declaración:", ctx.getText());
     const handlers = [
       { condition: () => ctx.letStatement(), handler: () => this.visit(ctx.letStatement()) },
       { condition: () => ctx.constStatement(), handler: () => this.visit(ctx.constStatement()) },
@@ -425,8 +355,8 @@ visitLambdaExpr(ctx) {
 
     this.facts.push({
       type: 'letStatement',
-      name: name,
-      value: value
+      name,
+      value
     })
 
     return value
@@ -435,9 +365,11 @@ visitLambdaExpr(ctx) {
   visitConstStatement (ctx) {
     const name = ctx.identifier().getText()
     const value = this.visit(ctx.expression())
+
     if (this.environment[name] !== undefined) {
       throw new Error(`Variable ${name} ya definida`)
     }
+    // console.log('VALUE 1: ',value, 'NAME: ', name)
     Object.defineProperty(this.environment, name, {
       value,
       writable: false,
@@ -446,9 +378,10 @@ visitLambdaExpr(ctx) {
 
     this.facts.push({
       type: 'constStatement',
-      name: name,
-      value: value
+      name,
+      value
     })
+    // console.log(this.facts)
     return value
   }
 
@@ -461,20 +394,60 @@ visitLambdaExpr(ctx) {
 
     this.facts.push({
       type: 'varStatement',
-      name: name,
-      value: value
+      name,
+      value
     })
     return value
+  }
+
+  visitLambdaExpr (ctx) {
+    const params = ctx.paramList() 
+        ? ctx.paramList().identifier().map(id => id.getText()) 
+        : []
+    const body = ctx.expression() || ctx.letInExpr()
+    const self  = this
+    console.log(`Parametros del lambda`,params)
+    const oldEnv = self.environment
+    const func = function () {
+
+      console.log("Function arguments:", arguments)
+      const newEnv = Object.assign({},oldEnv)
+      for (let i = 0; i < arguments.length; i++) {
+        newEnv[params[i]] = arguments[i]
+        console.log(newEnv[params[i]], params[i])
+      }
+      
+      console.log('Old environment',oldEnv)
+      self.environment = newEnv
+      console.log(newEnv)
+      let result
+      if (body) {
+        if (ctx.letInExpr()) {
+          result = self.visit(ctx.letInExpr())
+        }else{
+          result = self.visit(body)
+        }
+        self.environment = oldEnv
+      }
+      console.log("Exit function, ", result)
+      console.log("Ultimo environment function", self.environment)
+      return result
+    }
+    console.log("Exit lambda",func)
+    console.log("Ultimo environment lambda", this.environment)
+    return func
   }
 
   // Agrega este método a tu clase BiesCodeGeneratorVisitor
   visitLetInExpr (ctx) {
     const environmentBackup = { ...this.environment } // Guardar el entorno actual para restaurarlo después
     // Procesar todas las declaraciones dentro de let {...}
+
     const statements = ctx.constStatement() || ctx.letStatement() || ctx.varStatement()
     for (const stmt of statements) {
       this.visit(stmt) // Procesa cada declaración
     }
+
     // Procesar la expresión final en 'in { ... }'
     const result = this.visit(ctx.expression())
     this.environment = environmentBackup // Restaurar el entorno original
@@ -483,10 +456,35 @@ visitLambdaExpr(ctx) {
 
   visitIfThenElseExpr (ctx) {
     const condition = this.visit(ctx.expression(0))
+    // console.log(`Evaluando if con condición: ${condition}`)
+    let result
+    if (condition) { result = this.visit(ctx.expression(1)) } else { result = this.visit(ctx.expression(2)) }
 
-    const thenExpression = this.visit(ctx.expression(1))
-    const elseExpression = this.visit(ctx.expression(2))
+    return result
+  }
 
-    return condition ? thenExpression : elseExpression
+  visitListExpr (ctx) {
+    const elements = ctx.expression().map(expr => this.visit(expr))
+    this.facts.push({ type: 'list', elements })
+    // console.log('Elemenos de la lista: ', elements)
+    return elements
+  }
+
+  visitArrayAccess (ctx) {
+    const arrayName = ctx.IDENTIFIER().getText()
+    const index = this.visit(ctx.expression())
+    const array = this.environment[arrayName]
+    if (!Array.isArray(array)) {
+      throw new Error(`Se intentó acceder a '${arrayName}' que no es un array`)
+    }
+    if (typeof index !== 'number' || index < 0 || index >= array.length) {
+      throw new Error(`Índice fuera de rango: ${index} para el array '${arrayName}'`)
+    }
+
+    const value = array[index]
+
+    this.facts.push({ type: 'arrayAccess', arrayName, index, value })
+
+    return value
   }
 }

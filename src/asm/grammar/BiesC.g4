@@ -82,7 +82,7 @@ postfixExpr
     ;
 
 postfixOp
-    : '(' argumentList? ')'    
+    : '(' argumentList? ')'     # FunctionCall
     ;
 
 argumentList
@@ -99,19 +99,23 @@ primaryExpr
     | blockExpr
     | ifThenElseExpr
     | letStatement
+    | arrayAccess
     ;
 
 // Lambdas anónimas
 lambdaExpr
-    //: '(' paramList? ')' '=>' (expression | letInExpr)
-    //: '(' paramList? ')' '=>' (lambdaExpr | expression | letInExpr)
-    : '(' paramList? ')' '=>' (lambdaExpr | expression | letInExpr)  
+    : '(' paramList? ')' '=>' (expression | letInExpr | ifThenElseExpr)
+    | identifier '=>' (expression | letInExpr | ifThenElseExpr)
     ;
 
 // Expresión 'let-in'
 letInExpr
-    : 'let' '{' (constStatement | letStatement | varStatement | funDeclaration)* '}' 'in' '{'? expression * '}'?
+    : 'let' '{' (constStatement | letStatement | varStatement)* '}' 'in' '{'? expression * '}'?
     ;
+
+arrayAccess
+  : IDENTIFIER '[' expression ']'   
+  ;
 
 // Bloque de expresiones
 blockExpr

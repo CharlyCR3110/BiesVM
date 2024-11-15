@@ -1,0 +1,13 @@
+; Authors:
+; Raquel Alfaro Barrantes, Carlos González Garita
+; Samuel Alfaro Rodríguez, Isaac Felipe Brenes Calderón
+$FUN $0 args:0 parent:$0
+LDV "true"
+BST 0 0 ; x
+BLD 0 0
+LDV "false"
+OR
+BR 0
+LDV "Hello"
+HLT
+$END

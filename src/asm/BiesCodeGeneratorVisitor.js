@@ -1,5 +1,6 @@
 import BiesVMVisitor from '../asm/grammar/.antlr/BiesCVisitor.js'
 import readline from 'readline'
+import fs from 'fs'
 
 /**
  * Visitor class to handle BIES language constructs and build intermediate representations.
@@ -19,8 +20,13 @@ import readline from 'readline'
 export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
   constructor () {
     super()
+    this.functionCount = 0
+    this.variableIndex = 0 // Contador para variables
+    this.instructions = []
     this.environment = {}
+    this.variables = {}
     this.facts = []
+    this.functions = []
   }
 
   /**
@@ -30,16 +36,27 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
    * @returns {Object} - facts and functions after visiting the program.
    */
   visitProgram (ctx) {
+    this.emit('; Authors:')
+    this.emit('; Raquel Alfaro Barrantes, Carlos González Garita')
+    this.emit('; Samuel Alfaro Rodríguez, Isaac Felipe Brenes Calderón')
+    this.emit('$FUN $0 args:0 parent:$0')
     const statements = ctx.statement()
     for (const stmt of statements) {
       this.visit(stmt)
     }
+    this.emit('HLT') // Fin del programa principal
+    this.emit('$END')
+    this.writeFunctions()
   }
 
   * factsGenerator () {
     for (const fact of this.facts) {
       yield fact
     }
+  }
+
+  emit (instruction) {
+    this.instructions.push(instruction)
   }
 
   visitLiteral (ctx) {
@@ -50,6 +67,13 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
         : parseFloat(ctx.NUMBER_LITERAL().getText())
 
     this.facts.push({ type: 'literal', value: literal })
+    // Determinar el formato del valor a cargar
+    const loadValue = typeof literal === 'string'
+      ? `"${literal}"`
+      : literal;
+    (this.variables[loadValue] !== undefined)
+      ? this.emit(`BLD 0 ${this.variables[ctx.getText()]}`)
+      : this.emit(`LDV ${loadValue}`)
     return literal
   }
 
@@ -73,22 +97,51 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     })
   }
 
+  writeFunctions () {
+    this.functions.forEach(func => {
+      // Emitir la declaración de la función con el ID y el número de parámetros
+      this.emit(`$FUN ${func.funcID} args:${func.params.length} parent:$0`)
+
+      // Guardar los parámetros de la función en el entorno
+      func.params.forEach((param, index) => {
+        // Guardamos el parámetro en el entorno con su índice
+        this.variables[param] = index
+        this.environment[param] = index
+      })
+
+      // Procesar el cuerpo de la función
+      this.visit(func.body)
+      this.emit('RET') // Retorno de la función
+      this.emit('$END') // Fin de la declaración de la función
+    })
+  }
+
+  generateFunctionID () {
+    this.functionCount++
+    return `$${this.functionCount}`
+  }
+
   visitIdentifier (ctx) {
     const name = ctx.getText()
     // console.log('Name: ',name)
     let env = this.environment
     this.facts.push({ type: 'identifier', name })
     // console.log('Estado de environment:', this.environment);
+    if (this.variables[name] !== undefined) {
+      this.emit(`BLD 0 ${this.variables[name]}`)
+    }
     while (env !== null) {
       if (env[name] !== undefined) {
         // console.log(env[name])
+        // if () { this.emit('APP') }
+        if (env[name].name === 'func') { this.emit('APP') }
         return env[name]
       }
       env = Object.getPrototypeOf(env)
       // console.log('While...', env)
-      
     }
     if (name === 'print') {
+      this.emit('PRN')
       return console.log
     } else if (name === 'input') {
       return async (prompt) => this.getUserInput(prompt || 'Enter input: ').then(value => value)
@@ -96,13 +149,19 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
       return (value) => {
         const num = parseInt(value, 10)
         if (isNaN(num)) throw new Error(`int: No se pudo convertir '${value}' a número`)
+        this.emit(`LDV ${num}`)
         return num
       }
     } else if (name === 'str') {
-      return (value) => String(value)
+      return (value) => {
+        const stringVal = String(value)
+        this.emit(`LDV ${stringVal}`)
+        return String(value)
+      }
     } else if (name === 'len') {
       return (value) => {
         if (typeof value === 'string' || Array.isArray(value)) {
+          this.emit(`LDV ${value.length}`)
           return value.length
         } else {
           throw new Error('len: Tipo no soportado para \'len\'')
@@ -164,7 +223,10 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
   }
 
   visitArgumentList (ctx) {
+    const functionCall = this.instructions.pop()
     const args = ctx.expression().map(expr => this.visit(expr))
+    this.emit(`${functionCall}`)
+    if (functionCall.startsWith('BLD')) { this.emit('APP') }
     return args
   }
 
@@ -172,7 +234,10 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     if (ctx.unaryExpr()) {
       const operator = ctx.getChild(0).getText()
       const value = this.visit(ctx.unaryExpr())
-      const result = operator === '!' ? !value : -value
+      const result = operator === '!' ? !value : -value;
+      (operator === '!')
+        ? this.emit('NOT')
+        : this.emit('NEG')
       this.facts.push({
         type: 'unaryExpression',
         operator,
@@ -189,11 +254,39 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     let result = this.visit(ctx.unaryExpr(0))
     // Si hay operadores '**' y procesamos la recursión
     const powerExprs = ctx.powerExpr() // Obtener todas las expresiones de potencia
-
+    const base = result
     // Si hay operadores '**', las procesamos en orden
     for (let i = 0; i < powerExprs.length; i++) {
       const right = this.visit(powerExprs[i]) // Obtener el operando derecho de la potencia
       result = Math.pow(result, right) // Aplicar la potencia
+      this.instructions.pop()
+      this.instructions.pop()
+      if (right === 0) this.emit('LDV 1')
+      else if (right === 1) this.emit(`LDV ${base}`)
+      else {
+        this.emit('LDV 2')
+        this.emit(`BST 0 ${this.variableIndex++}`)
+        this.emit(`LDV ${base}`) // multiplicador
+        this.emit(`BST 0 ${this.variableIndex++}`)
+        this.emit(`LDV ${base}`) // base
+        this.emit(`BST 0 ${this.variableIndex++}`)
+        this.emit(`LDV ${right}`) // exponente
+        this.emit(`BST 0 ${this.variableIndex++}`)
+        this.emit(`BLD 0 ${this.variableIndex - 4}`) // cargar contador
+        this.emit(`BLD 0 ${this.variableIndex - 1}`) // cargar exponente
+        this.emit('GT')
+        this.emit('BT +9')
+        this.emit(`BLD 0 ${this.variableIndex - 2}`) // cargar base
+        this.emit(`BLD 0 ${this.variableIndex - 3}`) // cargar multiplicador
+        this.emit('MUL')
+        this.emit(`BST 0 ${this.variableIndex - 3}`)
+        this.emit(`BLD 0 ${this.variableIndex - 4}`) // cargar contador
+        this.emit('LDV 1')
+        this.emit('ADD')
+        this.emit(`BST 0 ${this.variableIndex - 4}`)
+        this.emit('BR -13')
+        this.emit(`BLD 0 ${this.variableIndex - 3}`) // cargar multiplicador
+      }
     }
     return result
   }
@@ -204,8 +297,10 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
       const operator = ctx.getChild(2 * i - 1).getText()
       const right = this.visit(ctx.powerExpr(i))
       if (operator === '*') {
+        this.emit('MUL')
         result *= right
       } else if (operator === '/') {
+        this.emit('DIV')
         result /= right
       }
       this.facts.push({
@@ -226,11 +321,20 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
       if (operator === '+') {
         if (typeof result === 'string' || typeof right === 'string') {
           result = String(result) + String(right)
+          const sum1 = this.instructions.pop()
+          const sum2 = this.instructions.pop()
+          this.emit(`${sum2}`)
+          if (sum2.startsWith('BLD')) this.emit("CST 'string'")
+          this.emit(`${sum1}`)
+          if (sum1.startsWith('BLD')) this.emit("CST 'string'")
+          this.emit('CAT')
         } else {
           result += right
+          this.emit('ADD')
         }
       } else if (operator === '-') {
         result -= right
+        this.emit('SUB')
       }
       this.facts.push({
         type: 'additiveExpression',
@@ -250,12 +354,16 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
       const right = this.visit(ctx.additiveExpr(i))
       if (operator === '>') {
         result = result > right
+        this.emit('GT')
       } else if (operator === '>=') {
         result = result >= right
+        this.emit('GTE')
       } else if (operator === '<') {
         result = result < right
+        this.emit('LT')
       } else if (operator === '<=') {
         result = result <= right
+        this.emit('LTE')
       }
       this.facts.push({
         type: 'relationalExpression',
@@ -278,8 +386,11 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
         /* eslint-disable eqeqeq */
         // console.log('Eq',result,'==',right)
         result = result == right
+        this.emit('EQQ')
       } else if (operator === '!=') {
         result = result != right
+        this.emit('EQQ')
+        this.emit('NOT')
       }
       this.facts.push({
         type: 'equalityExpression',
@@ -296,6 +407,7 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     let result = this.visit(ctx.equalityExpr(0))
     for (let i = 1; i < ctx.equalityExpr().length; i++) {
       result = result && this.visit(ctx.equalityExpr(i))
+      this.emit('AND')
     }
     return result
   }
@@ -303,7 +415,8 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
   visitLogicalOrExpr (ctx) {
     let result = this.visit(ctx.logicalAndExpr(0))
     for (let i = 1; i < ctx.logicalAndExpr().length; i++) {
-      result = result || this.visit(ctx.logicalAndExpr(i))
+      result = /* result || */ this.visit(ctx.logicalAndExpr(i))
+      this.emit('OR')
     }
     return result
   }
@@ -358,7 +471,9 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
       name,
       value
     })
-
+    this.emit(`BST 0 ${this.variableIndex} ; ${name}`)
+    this.variables[name] = this.variableIndex
+    this.variableIndex++ // Aumentar el índice para la siguiente variable
     return value
   }
 
@@ -381,6 +496,9 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
       name,
       value
     })
+    this.emit(`BST 0 ${this.variableIndex} ; ${name}`)
+    this.variables[name] = this.variableIndex
+    this.variableIndex++ // Aumentar el índice para la siguiente variable
     // console.log(this.facts)
     return value
   }
@@ -397,44 +515,53 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
       name,
       value
     })
+    this.emit(`BST 0 ${this.variableIndex} ; ${name}`)
+    this.variables[name] = this.variableIndex
+    this.variableIndex++ // Aumentar el índice para la siguiente variable
     return value
   }
 
   visitLambdaExpr (ctx) {
-    const params = ctx.paramList() 
-        ? ctx.paramList().identifier().map(id => id.getText()) 
-        : []
+    const funcID = this.generateFunctionID()
+    const params = ctx.paramList()
+      ? ctx.paramList().identifier().map(id => id.getText())
+      : []
+    this.functions.push({
+      funcID,
+      params,
+      body: ctx.expression() // Cuerpo de la función
+    })
+    this.emit(`LDF ${funcID}`)
     const body = ctx.expression() || ctx.letInExpr()
-    const self  = this
-    console.log(`Parametros del lambda`,params)
+    const self = this
+    console.log('Parametros del lambda', params)
     const oldEnv = self.environment
     const func = function () {
-
-      console.log("Function arguments:", arguments)
-      const newEnv = Object.assign({},oldEnv)
+      console.log('Function arguments:', arguments)
+      const newEnv = Object.assign({}, oldEnv)
       for (let i = 0; i < arguments.length; i++) {
         newEnv[params[i]] = arguments[i]
         console.log(newEnv[params[i]], params[i])
       }
-      
-      console.log('Old environment',oldEnv)
+
+      console.log('Old environment', oldEnv)
       self.environment = newEnv
       console.log(newEnv)
       let result
       if (body) {
         if (ctx.letInExpr()) {
           result = self.visit(ctx.letInExpr())
-        }else{
+        } else {
           result = self.visit(body)
         }
         self.environment = oldEnv
       }
-      console.log("Exit function, ", result)
-      console.log("Ultimo environment function", self.environment)
+      console.log('Exit function, ', result)
+      console.log('Ultimo environment function', self.environment)
       return result
     }
-    console.log("Exit lambda",func)
-    console.log("Ultimo environment lambda", this.environment)
+    console.log('Exit lambda', func)
+    console.log('Ultimo environment lambda', this.environment)
     return func
   }
 
@@ -457,6 +584,7 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
   visitIfThenElseExpr (ctx) {
     const condition = this.visit(ctx.expression(0))
     // console.log(`Evaluando if con condición: ${condition}`)
+    this.emit('BR 0')
     let result
     if (condition) { result = this.visit(ctx.expression(1)) } else { result = this.visit(ctx.expression(2)) }
 
@@ -466,6 +594,7 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
   visitListExpr (ctx) {
     const elements = ctx.expression().map(expr => this.visit(expr))
     this.facts.push({ type: 'list', elements })
+    this.emit("CST 'list'")
     // console.log('Elemenos de la lista: ', elements)
     return elements
   }
@@ -486,5 +615,11 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     this.facts.push({ type: 'arrayAccess', arrayName, index, value })
 
     return value
+  }
+
+  writeToFile (filename) {
+    const basmContent = this.instructions.join('\n')
+    fs.writeFileSync(filename, basmContent, 'utf8')
+    console.log(`.basm file generated: ${filename}`)
   }
 }

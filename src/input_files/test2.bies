@@ -1,4 +1,4 @@
-// Version compleja 1
-let splash = () => print("Testing helloworld Version 1 ***")
-splash()
+let splash = (msg) => print(msg)
+let version = 666 - 664
+splash("Testing helloworld Version " + version + "***")
 print("Hello World!")

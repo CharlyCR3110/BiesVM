@@ -1,12 +1,9 @@
-// Version compleja 5 let-in
+// Version Extra compleja 6 Maximo entre dos números, lambda binaria
+let max = (x, y) => if (x > y) then x else y
 let {
-		const splash = (msg) => print(msg)
-		const greetings = () =>
-		      let {const greet = input("Enter greeting>")
-			  } in
-			  if (len(greet) == 0 ) then "Hello World!" else greet
-	} in {
-	    let version = 5 ** 2 / (4 + 1)
-		splash("Testing helloworld Version " + version + " ***")
-		print(greetings())
-    }
+	const x = 10
+	const y = 20
+} in {
+	print("*** Testing max("+ x + " ," + y + ") ***")
+	print(max(x, y))
+}

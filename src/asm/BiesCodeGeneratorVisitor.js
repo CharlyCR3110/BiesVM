@@ -108,7 +108,6 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
         this.variables[param] = index
         this.environment[param] = index
       })
-
       // Procesar el cuerpo de la función
       this.visit(func.body)
       this.emit('RET') // Retorno de la función
@@ -147,29 +146,30 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
       this.emit('INP')
       return name
     } else if (name === 'int') {
+      this.emit('INT')
       return (value) => {
         const num = parseInt(value, 10)
         if (isNaN(num)) throw new Error(`int: No se pudo convertir '${value}' a número`)
-        this.emit(`LDV ${num}`)
         return num
       }
     } else if (name === 'str') {
+      this.emit('STR')
       return (value) => {
-        const stringVal = String(value)
-        this.emit(`LDV ${stringVal}`)
+        //  const stringVal = String(value)
+        // this.emit(`LDV ${stringVal}`)
         return String(value)
       }
     } else if (name === 'len') {
+      this.emit('LEN')
       return (value) => {
         if (typeof value === 'string' || Array.isArray(value)) {
-          this.emit('LEN')
           return value.length
         } else {
-          throw new Error('len: Tipo no soportado para \'len\'')
+          // throw new Error('len: Tipo no soportado para \'len\'')
         }
       }
     } else {
-      throw new Error(`Variable o función '${name}' no definida`)
+      if (this.variables[name] === undefined) throw new Error(`Variable o función '${name}' no definida`)
     }
   }
 
@@ -208,11 +208,13 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
 
   visitPostfixOp (ctx, func) {
     if (ctx.argumentList()) {
-      const args = this.visitArgumentList(ctx.argumentList())
-      if (typeof func === 'function') {
-        return func(...args)
-      } else {
-        throw new Error('Intento de llamar a un valor no función')
+      if (func !== 'input') {
+        const args = this.visitArgumentList(ctx.argumentList())
+        if (typeof func === 'function') {
+          return func(...args)
+        } else {
+          throw new Error('Intento de llamar a un valor no función')
+        }
       }
     } else {
       if (typeof func === 'function') {
@@ -230,7 +232,9 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     if (f !== null) {
       this.emit(`${f}`)
       this.emit(`${functionCall}`)
-    } else this.emit(`${functionCall}`)
+    } else if (functionCall === 'STR') this.emit("CST 'string'")
+    else if (functionCall === 'INT') this.emit("CST 'int'")
+    else this.emit(`${functionCall}`)
     return args
   }
 
@@ -391,7 +395,8 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
   visitLogicalOrExpr (ctx) {
     let result = this.visit(ctx.logicalAndExpr(0))
     for (let i = 1; i < ctx.logicalAndExpr().length; i++) {
-      result = /* result || */ this.visit(ctx.logicalAndExpr(i))
+      const visit = this.visit(ctx.logicalAndExpr(i))
+      result = result || visit
       this.emit('OR')
     }
     return result
@@ -505,7 +510,7 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     this.functions.push({
       funcID,
       params,
-      body: ctx.expression() // Cuerpo de la función
+      body: ctx.expression() || ctx.letInExpr() //  Cuerpo de la función
     })
     this.emit(`LDF ${funcID}`)
     const body = ctx.expression() || ctx.letInExpr()
@@ -523,10 +528,10 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
       console.log('Old environment', oldEnv)
       self.environment = newEnv
       console.log(newEnv)
-      let result
+      // let result
       if (body) {
         if (ctx.letInExpr()) {
-          result = self.visit(ctx.letInExpr())
+          // result = self.visit(ctx.letInExpr())
         } else {
           // result = self.visit(body)
         }
@@ -534,7 +539,6 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
       }
       // console.log('Exit function, ', result)
       console.log('Ultimo environment function', self.environment)
-      return result
     }
     console.log('Exit lambda', func)
     console.log('Ultimo environment lambda', this.environment)
@@ -560,23 +564,45 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
   visitIfThenElseExpr (ctx) {
     const condition = this.visit(ctx.expression(0))
     // console.log(`Evaluando if con condición: ${condition}`)
-    this.emit('BR 0')
+    this.emit('BF 2')
     let result
-    if (condition) { result = this.visit(ctx.expression(1)) } else { result = this.visit(ctx.expression(2)) }
-
+    // if (condition) { result = this.visit(ctx.expression(1)) } else { result = this.visit(ctx.expression(2)) }
+    const ifThen = this.visit(ctx.expression(1))
+    this.emit('BR 1')
+    const ifElse = result = this.visit(ctx.expression(2))
+    if (condition) result = ifThen
+    else result = ifElse
     return result
   }
 
   visitListExpr (ctx) {
     const elements = ctx.expression().map(expr => this.visit(expr))
-    this.facts.push({ type: 'list', elements })
-    this.emit("CST 'list'")
+    const top = this.facts[this.facts.length - 1]
+    if (top.type !== 'arrayAccess' && !Array.isArray(this.environment[this.facts[this.facts.length - 2].name])) {
+      this.facts.push({ type: 'list', elements })
+      // Realiza pop() n veces
+      for (let i = 0; i < elements.length; i++) {
+        this.instructions.pop()
+      }
+      for (let i = 0; i < elements.length; i++) {
+        const elem = elements[i]
+        const isNumber = typeof elem === 'number'
+        const isBoolean = elem === true || elem === false
+        const isUndefinedVariable = this.variables[elem] === undefined
+
+        if (!isNumber && !isBoolean && isUndefinedVariable) {
+          elements[i] = `"${elem}"`
+        }
+      }
+      this.emit(`LDV [${elements}]`)
     // console.log('Elemenos de la lista: ', elements)
+    } else { this.emit('LTK') }
     return elements
   }
 
   visitArrayAccess (ctx) {
     const arrayName = ctx.IDENTIFIER().getText()
+    this.emit(`BLD 0 ${this.variables[arrayName]}`)
     const index = this.visit(ctx.expression())
     const array = this.environment[arrayName]
     if (!Array.isArray(array)) {
@@ -587,6 +613,7 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     }
 
     const value = array[index]
+    this.emit('LTK')
 
     this.facts.push({ type: 'arrayAccess', arrayName, index, value })
 

@@ -75,15 +75,15 @@ biesc [options] file.bies
   ```
 - Compilation with specific output file:
   ```bash
-  biesc --o compiledFile.biesASM source.bies
+  biesc source.bies --o compiledFile.biesASM 
   ```
 - Compilation with error logging:
   ```bash
-  biesc --e errors.log source.bies
+  biesc source.bies --e errors.log
   ```
 - Combining both options:
   ```bash
-  biesc --o compiledFile.biesASM --e errors.log source.bies
+  biesc source.bies --o compiledFile.biesASM --e errors.log
   ```
 
 

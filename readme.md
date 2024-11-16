@@ -86,6 +86,51 @@ biesc [options] file.bies
   biesc source.bies --o compiledFile.biesASM --e errors.log
   ```
 
+### Compiling and Running a Source File
+
+With the `biesRun` command, you can compile a `.bies` source file and run the compiled code in one step:
+
+```bash
+biesRun file.bies [options]
+```
+
+#### Command Options
+
+- `--o outfile`: Specifies the output file for the compiled code. If omitted, the output file will take the source filename without its `.bies` extension. 
+
+*This file will be saved in the`output_files` folder.*
+
+- `--e errfile`: Specifies a file for logging errors encountered during compilation. If omitted, errors are logged to the console.
+
+*This file will be saved in the `errors` folder.*
+
+#### Example Usage
+
+- Compile and run a source file:
+  ```bash
+  biesRun source.bies
+  ```
+- Specify a custom output file for the compiled code:
+  ```bash
+  biesRun source.bies --o compiledFile.biesASM
+  ```
+- Log errors to a specific file:
+  ```bash
+  biesRun source.bies --e errors.log
+  ```
+- Combine both options:
+  ```bash
+  biesRun source.bies --o compiledFile.biesASM --e errors.log
+  ```
+
+### How It Works
+
+1. **Compiles the Source File:**
+   - `biesRun` invokes the `BiesVM` package to compile the `.bies` file into a `.biesASM` file.
+2. **Executes the Compiled Code:**
+   - Automatically switches to the `BiesEnv` package to execute the compiled `.biesASM` file.
+3. **Displays the Output:**
+    - The output of the executed code is displayed in the console.
 
 ## Language Syntax and Examples
 
@@ -114,4 +159,3 @@ npm run doc
 - **Felipe Brenes Calderón**
 - **Raquel Alfaro Barrantes**
 - **Samuel Alfaro Rodríguez**
-

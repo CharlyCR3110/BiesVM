@@ -5,7 +5,8 @@
   "main": ".\\src\\main.js",
   "type": "module",
   "bin": {
-    "biesc": ".\\src\\main.js"
+    "biesc": ".\\src\\main.js",
+    "biesRun": ".\\src\\biesRun.js"
   },
   "scripts": {
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",

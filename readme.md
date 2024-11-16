@@ -132,6 +132,40 @@ biesRun file.bies [options]
 3. **Displays the Output:**
     - The output of the executed code is displayed in the console.
 
+### Testing the Compiler with Multiple Files
+
+You can test the compiler against multiple `.bies` files in the `./input_files` folder using the script in `testCompiler.js`. This script compiles each file and logs errors or outputs for each one.
+
+#### Running the Test
+
+```bash
+npm run test
+```
+
+#### What It Does
+
+1. Scans the `./input_files` directory for `.bies` files.
+2. Compiles each file using the `BiesVM` compiler.
+3. Saves the compiled output in `./output_files`.
+4. Logs errors (if any) in `./error_logs`.
+
+#### Example Output
+
+If you have two files (`test1.bies` and `test2.bies`) in `./input_files`, you might see:
+
+```bash
+Encontrados 2 archivos para probar.
+
+Compilando: test1.bies
+✅ test1.bies se ha intentado compilar exitosamente. En caso de errores, revisa el archivo de errores.
+
+Compilando: test2.bies
+❌ Error al compilar test2.bies.
+
+Pruebas completadas.
+```
+
+
 ## Language Syntax and Examples
 
 Here are examples demonstrating the BIES syntax and functionality:

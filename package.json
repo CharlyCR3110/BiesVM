@@ -9,7 +9,7 @@
     "biesRun": ".\\src\\biesRun.js"
   },
   "scripts": {
-    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",
+    "test": "npm run antlr && node test\\testCompiler.js",
     "doc": "jsdoc -c jsdoc.json",
     "lint": "standard --fix",
     "antlr": "src\\asm\\grammar\\generate_parser.bat",

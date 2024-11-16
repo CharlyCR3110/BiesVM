@@ -25,7 +25,6 @@ files.forEach(file => {
 
   try {
     const compileCommand = `biesc ${inputFilePath} --o ${outputFilePath} --e ${errorFilePath}`
-    console.log(`command: ${compileCommand}...`)
 
     execSync(compileCommand, { stdio: 'inherit' })
 

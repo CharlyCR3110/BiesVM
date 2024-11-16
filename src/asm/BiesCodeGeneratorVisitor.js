@@ -122,26 +122,21 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
 
   visitIdentifier (ctx) {
     const name = ctx.getText()
-    // console.log('Name: ',name)
     let env = this.environment
     this.facts.push({ type: 'identifier', name })
-    // console.log('Estado de environment:', this.environment);
     if (this.variables[name] !== undefined) {
       this.emit(`BLD 0 ${this.variables[name]}`)
     }
     while (env !== null) {
       if (env[name] !== undefined) {
-        // console.log(env[name])
-        // if () { this.emit('APP') }
         if (env[name].name === 'func') { this.emit('APP') }
         return env[name]
       }
       env = Object.getPrototypeOf(env)
-      // console.log('While...', env)
     }
     if (name === 'print') {
       this.emit('PRN')
-      return console.log
+      return () => { }
     } else if (name === 'input') {
       this.emit('INP')
       return name
@@ -174,7 +169,6 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
   }
 
   visitPrimaryExpr (ctx) {
-    // console.log("Primary expression:", ctx.getText());
     const handlers = [
       { condition: () => ctx.identifier(), handler: () => this.visitIdentifier(ctx.identifier()) },
       { condition: () => ctx.literal(), handler: () => this.visitLiteral(ctx.literal()) },
@@ -358,13 +352,11 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
 
   visitEqualityExpr (ctx) {
     let result = this.visit(ctx.relationalExpr(0))
-    // console.log(result)
     for (let i = 1; i < ctx.relationalExpr().length; i++) {
       const operator = ctx.getChild(2 * i - 1).getText()
       const right = this.visit(ctx.relationalExpr(i))
       if (operator === '==') {
         /* eslint-disable eqeqeq */
-        // console.log('Eq',result,'==',right)
         result = result == right
         this.emit('EQQ')
       } else if (operator === '!=') {
@@ -379,7 +371,6 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
         result
       })
     }
-    // console.log(result)
     return result
   }
 
@@ -411,7 +402,6 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
   }
 
   visitStatement (ctx) {
-    // console.log("Tipo de declaración:", ctx.getText());
     const handlers = [
       { condition: () => ctx.letStatement(), handler: () => this.visit(ctx.letStatement()) },
       { condition: () => ctx.constStatement(), handler: () => this.visit(ctx.constStatement()) },
@@ -465,7 +455,6 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     if (this.environment[name] !== undefined) {
       throw new Error(`Variable ${name} ya definida`)
     }
-    // console.log('VALUE 1: ',value, 'NAME: ', name)
     Object.defineProperty(this.environment, name, {
       value,
       writable: false,
@@ -480,7 +469,6 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     this.emit(`BST 0 ${this.variableIndex} ; ${name}`)
     this.variables[name] = this.variableIndex
     this.variableIndex++ // Aumentar el índice para la siguiente variable
-    // console.log(this.facts)
     return value
   }
 
@@ -515,19 +503,14 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     this.emit(`LDF ${funcID}`)
     const body = ctx.expression() || ctx.letInExpr()
     const self = this
-    console.log('Parametros del lambda', params)
     const oldEnv = self.environment
     const func = function () {
-      console.log('Function arguments:', arguments)
       const newEnv = Object.assign({}, oldEnv)
       for (let i = 0; i < arguments.length; i++) {
         newEnv[params[i]] = arguments[i]
-        console.log(newEnv[params[i]], params[i])
       }
 
-      console.log('Old environment', oldEnv)
       self.environment = newEnv
-      console.log(newEnv)
       // let result
       if (body) {
         if (ctx.letInExpr()) {
@@ -537,11 +520,7 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
         }
         self.environment = oldEnv
       }
-      // console.log('Exit function, ', result)
-      console.log('Ultimo environment function', self.environment)
     }
-    console.log('Exit lambda', func)
-    console.log('Ultimo environment lambda', this.environment)
     return func
   }
 
@@ -595,7 +574,6 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
         }
       }
       this.emit(`LDV [${elements}]`)
-    // console.log('Elemenos de la lista: ', elements)
     } else { this.emit('LTK') }
     return elements
   }

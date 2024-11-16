@@ -2,23 +2,12 @@
 
 import fs from 'fs'
 import { execSync } from 'child_process'
-import { mapInputFileNameToErrorFileName, mapInputFileNameToOutputFileName } from '../src/helpers/index.js'
-import { INPUT_FOLDER_PATH, OUTPUT_FOLDER_PATH, ERRORS_FOLDER_PATH } from '../src/common/index.js'
-// Rutas de entrada y salida
-const inputFolder = `./${INPUT_FOLDER_PATH}`
-const outputFolder = `./${OUTPUT_FOLDER_PATH}`
-const errorFolder = `./${ERRORS_FOLDER_PATH}`
+import { mapInputFileNameToErrorFileName, mapInputFileNameToOutputFileName, prepareFolders } from '../src/helpers/index.js'
+import { INPUT_FOLDER_PATH } from '../src/common/index.js'
 
-if (!fs.existsSync(inputFolder)) {
-  console.error(`Error: No se encontró la carpeta de entrada: ${inputFolder}`)
-  process.exit(1)
-}
-if (!fs.existsSync(outputFolder)) {
-  fs.mkdirSync(outputFolder)
-}
-if (!fs.existsSync(errorFolder)) {
-  fs.mkdirSync(errorFolder)
-}
+prepareFolders()
+
+const inputFolder = `./${INPUT_FOLDER_PATH}`
 
 const files = fs.readdirSync(inputFolder).filter(file => file.endsWith('.bies'))
 
@@ -40,7 +29,7 @@ files.forEach(file => {
 
     execSync(compileCommand, { stdio: 'inherit' })
 
-    console.log(`✅ ${file} se ha intentado compilar exitosamente. En caso de errores, revisa el archivo de errores.\n`)
+    console.log(`✨ ${file} se ha intentado compilar exitosamente. En caso de errores, revisa el archivo de errores.\n`)
   } catch (error) {
     console.error(`❌ Error al compilar ${file}. Ver detalles en: ${errorFilePath}\n`)
   }

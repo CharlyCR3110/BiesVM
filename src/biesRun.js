@@ -5,23 +5,10 @@ import path from 'path'
 import fs from 'fs'
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
-import { mapInputFileNameToOutputFileName, validateInputFilename } from './helpers/index.js'
-import { BIES_ENV_PATH, BIES_VM_OUTPUT_FILES_PATH_FROM_BIES_ENV, BIES_VM_PATH, ERRORS_FOLDER_PATH, INPUT_FOLDER_PATH, OUTPUT_FOLDER_PATH, RUN_COMMAND } from './common/index.js'
+import { mapInputFileNameToOutputFileName, prepareFolders, validateInputFilename } from './helpers/index.js'
+import { BIES_ENV_PATH, BIES_VM_OUTPUT_FILES_PATH_FROM_BIES_ENV, BIES_VM_PATH, RUN_COMMAND } from './common/index.js'
 
-const inputFolder = `./${INPUT_FOLDER_PATH}`
-const outputFolder = `./${OUTPUT_FOLDER_PATH}`
-const errorFolder = `./${ERRORS_FOLDER_PATH}`
-
-if (!fs.existsSync(inputFolder)) {
-  console.error(`Error: No se encontró la carpeta de entrada: ${inputFolder}`)
-  process.exit(1)
-}
-if (!fs.existsSync(outputFolder)) {
-  fs.mkdirSync(outputFolder)
-}
-if (!fs.existsSync(errorFolder)) {
-  fs.mkdirSync(errorFolder)
-}
+prepareFolders()
 
 const biesVMPath = path.resolve(BIES_VM_PATH)
 const biesEnvPath = path.resolve(BIES_ENV_PATH)

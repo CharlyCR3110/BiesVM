@@ -5,22 +5,9 @@ import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 import { generateBasm } from './asm/generateBasm.js'
 import { ERRORS_FOLDER_PATH, INPUT_FOLDER_PATH, OUTPUT_FOLDER_PATH } from './common/index.js'
-import { mapInputFileNameToOutputFileName, validateInputFilename } from './helpers/index.js'
+import { mapInputFileNameToOutputFileName, prepareFolders, validateInputFilename } from './helpers/index.js'
 
-const inputFolder = `./${INPUT_FOLDER_PATH}`
-const outputFolder = `./${OUTPUT_FOLDER_PATH}`
-const errorFolder = `./${ERRORS_FOLDER_PATH}`
-
-if (!fs.existsSync(inputFolder)) {
-  console.error(`Error: No se encontró la carpeta de entrada: ${inputFolder}`)
-  process.exit(1)
-}
-if (!fs.existsSync(outputFolder)) {
-  fs.mkdirSync(outputFolder)
-}
-if (!fs.existsSync(errorFolder)) {
-  fs.mkdirSync(errorFolder)
-}
+prepareFolders()
 
 const argv = yargs(hideBin(process.argv))
   .option('o', {

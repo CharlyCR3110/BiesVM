@@ -1,4 +1,0 @@
-let splash = (msg) => print(msg)
-let version = 666 - 664
-splash("Testing helloworld Version " + version + "***")
-print("Hello World!")

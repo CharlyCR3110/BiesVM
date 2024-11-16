@@ -43,7 +43,7 @@ To run this project, ensure you have the following:
 To compile a BIES source file (`.bies`) into assembly-like instructions (`.biesASM`), use the `biesc` command:
 
 ```bash
-biesc [options] file.bies
+biesc file.bies [options] 
 ```
 
 *makes sure to have the file in the `input_files` folder.*
@@ -56,7 +56,7 @@ biesc [options] file.bies
 
   - Example: 
     ```bash
-    biesc --o compiledFile.biesASM source.bies
+    biesc source.bies --o compiledFile.biesASM
     ```
 - `--e errfile`: Specifies a file for logging errors encountered during compilation. If omitted, errors are logged to the console.
 
@@ -64,7 +64,7 @@ biesc [options] file.bies
 
   - Example: 
     ```bash
-    biesc --e errors.log source.bies
+    biesc source.bies --e errors.log
     ```
 
 #### Example Usage

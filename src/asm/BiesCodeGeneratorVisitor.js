@@ -144,7 +144,8 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
       this.emit('PRN')
       return console.log
     } else if (name === 'input') {
-      return async (prompt) => this.getUserInput(prompt || 'Enter input: ').then(value => value)
+      this.emit('INP')
+      return name
     } else if (name === 'int') {
       return (value) => {
         const num = parseInt(value, 10)
@@ -161,7 +162,7 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     } else if (name === 'len') {
       return (value) => {
         if (typeof value === 'string' || Array.isArray(value)) {
-          this.emit(`LDV ${value.length}`)
+          this.emit('LEN')
           return value.length
         } else {
           throw new Error('len: Tipo no soportado para \'len\'')
@@ -224,9 +225,12 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
 
   visitArgumentList (ctx) {
     const functionCall = this.instructions.pop()
+    const f = (functionCall.startsWith('APP')) ? this.instructions.pop() : null
     const args = ctx.expression().map(expr => this.visit(expr))
-    this.emit(`${functionCall}`)
-    if (functionCall.startsWith('BLD')) { this.emit('APP') }
+    if (f !== null) {
+      this.emit(`${f}`)
+      this.emit(`${functionCall}`)
+    } else this.emit(`${functionCall}`)
     return args
   }
 
@@ -254,39 +258,11 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     let result = this.visit(ctx.unaryExpr(0))
     // Si hay operadores '**' y procesamos la recursión
     const powerExprs = ctx.powerExpr() // Obtener todas las expresiones de potencia
-    const base = result
     // Si hay operadores '**', las procesamos en orden
     for (let i = 0; i < powerExprs.length; i++) {
       const right = this.visit(powerExprs[i]) // Obtener el operando derecho de la potencia
       result = Math.pow(result, right) // Aplicar la potencia
-      this.instructions.pop()
-      this.instructions.pop()
-      if (right === 0) this.emit('LDV 1')
-      else if (right === 1) this.emit(`LDV ${base}`)
-      else {
-        this.emit('LDV 2')
-        this.emit(`BST 0 ${this.variableIndex++}`)
-        this.emit(`LDV ${base}`) // multiplicador
-        this.emit(`BST 0 ${this.variableIndex++}`)
-        this.emit(`LDV ${base}`) // base
-        this.emit(`BST 0 ${this.variableIndex++}`)
-        this.emit(`LDV ${right}`) // exponente
-        this.emit(`BST 0 ${this.variableIndex++}`)
-        this.emit(`BLD 0 ${this.variableIndex - 4}`) // cargar contador
-        this.emit(`BLD 0 ${this.variableIndex - 1}`) // cargar exponente
-        this.emit('GT')
-        this.emit('BT +9')
-        this.emit(`BLD 0 ${this.variableIndex - 2}`) // cargar base
-        this.emit(`BLD 0 ${this.variableIndex - 3}`) // cargar multiplicador
-        this.emit('MUL')
-        this.emit(`BST 0 ${this.variableIndex - 3}`)
-        this.emit(`BLD 0 ${this.variableIndex - 4}`) // cargar contador
-        this.emit('LDV 1')
-        this.emit('ADD')
-        this.emit(`BST 0 ${this.variableIndex - 4}`)
-        this.emit('BR -13')
-        this.emit(`BLD 0 ${this.variableIndex - 3}`) // cargar multiplicador
-      }
+      this.emit('POW')
     }
     return result
   }
@@ -552,11 +528,11 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
         if (ctx.letInExpr()) {
           result = self.visit(ctx.letInExpr())
         } else {
-          result = self.visit(body)
+          // result = self.visit(body)
         }
         self.environment = oldEnv
       }
-      console.log('Exit function, ', result)
+      // console.log('Exit function, ', result)
       console.log('Ultimo environment function', self.environment)
       return result
     }

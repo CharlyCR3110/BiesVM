@@ -1,2 +1,1 @@
-let x = true
-if(x||false) then "Hello" else "Goodbye"
+len("123")

@@ -5,3 +5,5 @@ src/asm/grammar/.antlr/
 # ignorar logs
 error.txt
 output.txt
+output_files/
+errors/

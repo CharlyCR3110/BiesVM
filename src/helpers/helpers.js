@@ -4,6 +4,10 @@ export const mapInputFileNameToOutputFileName = (inputFileName) => {
   return `${inputFileName.replace('.bies', OUTPUT_FILE_EXTENSION)}`
 }
 
+export const mapInputFileNameToErrorFileName = (inputFileName) => {
+  return `${inputFileName.replace('.bies', '.log')}`
+}
+
 export const validateInputFilename = (inputFilename) => {
   if (!inputFilename) {
     console.error('Por favor, proporciona el nombre del archivo como argumento.')

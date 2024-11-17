@@ -41,7 +41,7 @@ To run this project, ensure you have the following:
    ```bash
    npm run antlr
    ```
-4. Read and do the installation process in the `BiesVM` package.
+4. Read and do the installation process in the `BiesEnv` package.
 
 ## Usage
 

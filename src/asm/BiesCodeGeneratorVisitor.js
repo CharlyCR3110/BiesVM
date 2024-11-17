@@ -358,10 +358,10 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
       if (operator === '==') {
         /* eslint-disable eqeqeq */
         result = result == right
-        this.emit('EQQ')
+        this.emit('EQ')
       } else if (operator === '!=') {
         result = result != right
-        this.emit('EQQ')
+        this.emit('EQ')
         this.emit('NOT')
       }
       this.facts.push({

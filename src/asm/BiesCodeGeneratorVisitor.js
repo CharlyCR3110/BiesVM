@@ -226,8 +226,8 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     if (f !== null) {
       this.emit(`${f}`)
       this.emit(`${functionCall}`)
-    } else if (functionCall === 'STR') this.emit("CST 'string'")
-    else if (functionCall === 'INT') this.emit("CST 'int'")
+    } else if (functionCall === 'STR') this.emit("CST string")
+    else if (functionCall === 'INT') this.emit("CST int")
     else this.emit(`${functionCall}`)
     return args
   }
@@ -298,9 +298,9 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
           const sum1 = this.instructions.pop()
           const sum2 = this.instructions.pop()
           this.emit(`${sum2}`)
-          if (sum2.startsWith('BLD')) this.emit("CST 'string'")
+          if (sum2.startsWith('BLD')) this.emit("CST string")
           this.emit(`${sum1}`)
-          if (sum1.startsWith('BLD')) this.emit("CST 'string'")
+          if (sum1.startsWith('BLD')) this.emit("CST string")
           this.emit('CAT')
         } else {
           result += right

@@ -1,5 +1,10 @@
 #!/usr/bin/env node
 
+/**
+ * This script serves as the entry point for the BiesCode compiler, which processes input files
+ * and generates corresponding compiled output files. It includes error handling and supports
+ * customizable output and error file options through CLI arguments.
+ */
 import fs from 'fs'
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'

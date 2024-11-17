@@ -18,6 +18,11 @@ import fs from 'fs'
  */
 
 export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
+  /**
+   * Default constructor for initializing the internal state of the object.
+   * This constructor sets up various counters, lists, and maps used for managing
+   * functions, variables, instructions, and the execution environment.
+   */
   constructor () {
     super()
     this.functionCount = 0
@@ -48,17 +53,35 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     this.emit('$END')
     this.writeFunctions()
   }
-
+  /**
+   * A generator function that iterates through all facts stored in the `facts` list.
+   * Each fact is yielded one by one.
+   */
   * factsGenerator () {
     for (const fact of this.facts) {
       yield fact
     }
   }
-
+  /**
+   * Emits an instruction by appending it to the `instructions` list.
+   * 
+   * @param {string} instruction - The instruction to be added to the list.
+   */
   emit (instruction) {
     this.instructions.push(instruction)
   }
 
+  /**
+   * Processes a literal node from the provided context and generates the appropriate fact and instruction.
+   * 
+   * The function determines the type of literal (boolean, string, or number) and extracts its value.
+   * It adds the literal to the `facts` list and generates a corresponding load instruction, which is
+   * either a load value (`LDV`) or a load variable (`BLD`) based on the existence of the value in the
+   * `variables` map.
+   * 
+   * @param {Object} ctx - The context containing the literal to be processed.
+   * @returns {string|number|boolean} The extracted literal value.
+   */
   visitLiteral (ctx) {
     const literal = ctx.BOOL_LITERAL()
       ? ctx.BOOL_LITERAL().getText()
@@ -97,6 +120,17 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     })
   }
 
+  /**
+   * Writes all defined functions by emitting their declarations, processing their parameters,
+   * and handling their body instructions.
+   * 
+   * For each function, the method:
+   * - Emits the function declaration with its ID and number of parameters.
+   * - Saves the parameters in the environment and variable map with their corresponding indices.
+   * - Processes the function body.
+   * - Emits the `RET` instruction to indicate a function return.
+   * - Emits `$END` to mark the end of the function declaration.
+   */
   writeFunctions () {
     this.functions.forEach(func => {
       // Emitir la declaración de la función con el ID y el número de parámetros
@@ -115,11 +149,25 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     })
   }
 
+  /**
+   * Generates a unique function ID by incrementing the function count.
+   * 
+   * @returns {string} A unique ID for the function in the format `$<count>`.
+   */
   generateFunctionID () {
     this.functionCount++
     return `$${this.functionCount}`
   }
 
+  /**
+   * Processes an identifier from the provided context and performs various actions
+   * based on the identifier's name. It handles variable resolution, special function calls,
+   * and emits the appropriate instructions.
+   * 
+   * @param {Object} ctx - The context containing the identifier to process.
+   * @returns {any} The resolved value or function associated with the identifier.
+   * @throws {Error} If the identifier is not defined or cannot be resolved.
+   */
   visitIdentifier (ctx) {
     const name = ctx.getText()
     let env = this.environment
@@ -168,6 +216,25 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     }
   }
 
+  /**
+   * Processes a primary expression by delegating to the appropriate handler based on the type
+   * of expression. The method iterates through a list of conditions and their corresponding
+   * handlers, executing the handler for the first matching condition.
+   * 
+   * Supported primary expressions include:
+   * - Identifiers
+   * - Literals
+   * - Expressions
+   * - Lambda expressions
+   * - Let statements
+   * - If-then-else expressions
+   * - List expressions
+   * - Array access
+   * 
+   * @param {Object} ctx - The context representing the primary expression.
+   * @returns {any} The result of the handler for the matched expression type.
+   * @throws {Error} If the primary expression type is not supported.
+   */
   visitPrimaryExpr (ctx) {
     const handlers = [
       { condition: () => ctx.identifier(), handler: () => this.visitIdentifier(ctx.identifier()) },
@@ -191,6 +258,13 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     throw new Error(`Expresión primaria no soportada aún: ${ctx.getText()}`)
   }
 
+  /**
+   * Processes a postfix expression by visiting the primary expression first,
+   * then applying a series of postfix operations sequentially.
+   * 
+   * @param {Object} ctx - The context representing the postfix expression.
+   * @returns {any} The result of applying all postfix operations.
+   */
   visitPostfixExpr (ctx) {
     let result = this.visit(ctx.primaryExpr())
     const postfixOps = ctx.postfixOp()
@@ -200,6 +274,16 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     return result
   }
 
+  /**
+   * Handles a single postfix operation. If the operation includes an argument list, it validates
+   * and applies the function call with the provided arguments. Otherwise, it treats the function
+   * as a no-argument callable.
+   * 
+   * @param {Object} ctx - The context representing the postfix operation.
+   * @param {Function|string} func - The function or value to which the operation is applied.
+   * @returns {any} The result of the operation.
+   * @throws {Error} If the operation attempts to call a non-function value.
+   */
   visitPostfixOp (ctx, func) {
     if (ctx.argumentList()) {
       if (func !== 'input') {
@@ -219,6 +303,13 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     }
   }
 
+  /**
+   * Visits an argument list, evaluating each argument expression and emitting
+   * the appropriate instruction based on the function call type.
+   * 
+   * @param {Object} ctx - The context representing the argument list.
+   * @returns {Array} An array of evaluated arguments.
+   */
   visitArgumentList (ctx) {
     const functionCall = this.instructions.pop()
     const f = (functionCall.startsWith('APP')) ? this.instructions.pop() : null
@@ -232,6 +323,14 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     return args
   }
 
+  /**
+   * Evaluates a unary expression, supporting negation and logical NOT operations.
+   * If the context contains another unary expression, the operation is applied recursively.
+   * Otherwise, the method delegates to processing a postfix expression.
+   * 
+   * @param {Object} ctx - The context representing the unary expression.
+   * @returns {any} The result of evaluating the unary expression.
+   */
   visitUnaryExpr (ctx) {
     if (ctx.unaryExpr()) {
       const operator = ctx.getChild(0).getText()
@@ -252,6 +351,13 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     }
   }
 
+  /**
+   * Evaluates a power expression, applying exponential operations recursively.
+   * Supports chained power operators (**).
+   * 
+   * @param {Object} ctx - The context representing the power expression.
+   * @returns {number} The result of evaluating the power expression.
+   */
   visitPowerExpr (ctx) {
     let result = this.visit(ctx.unaryExpr(0))
     // Si hay operadores '**' y procesamos la recursión
@@ -265,6 +371,13 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     return result
   }
 
+  /**
+   * Evaluates a multiplicative expression, processing multiplication (*) and division (/).
+   * Operates sequentially on all terms in the expression.
+   * 
+   * @param {Object} ctx - The context representing the multiplicative expression.
+   * @returns {number} The result of evaluating the multiplicative expression.
+   */
   visitMultiplicativeExpr (ctx) {
     let result = this.visit(ctx.powerExpr(0))
     for (let i = 1; i < ctx.powerExpr().length; i++) {
@@ -287,6 +400,13 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     return result
   }
 
+  /**
+   * Evaluates an additive expression, supporting addition (+) and subtraction (-).
+   * Concatenation is supported for string operands.
+   * 
+   * @param {Object} ctx - The context representing the additive expression.
+   * @returns {number|string} The result of evaluating the additive expression.
+   */
   visitAdditiveExpr (ctx) {
     let result = this.visit(ctx.multiplicativeExpr(0))
     for (let i = 1; i < ctx.multiplicativeExpr().length; i++) {
@@ -321,6 +441,13 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     return result
   }
 
+  /**
+   * Evaluates a relational expression, supporting operators such as >, >=, <, and <=.
+   * The evaluation proceeds sequentially for all terms in the expression.
+   * 
+   * @param {Object} ctx - The context representing the relational expression.
+   * @returns {boolean} The result of evaluating the relational expression.
+   */
   visitRelationalExpr (ctx) {
     let result = this.visit(ctx.additiveExpr(0))
     for (let i = 1; i < ctx.additiveExpr().length; i++) {
@@ -350,6 +477,13 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     return result
   }
 
+  /**
+   * Evaluates an equality expression, supporting operators such as == and !=.
+   * Handles type coercion for equality checks.
+   * 
+   * @param {Object} ctx - The context representing the equality expression.
+   * @returns {boolean} The result of evaluating the equality expression.
+   */
   visitEqualityExpr (ctx) {
     let result = this.visit(ctx.relationalExpr(0))
     for (let i = 1; i < ctx.relationalExpr().length; i++) {
@@ -374,6 +508,13 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     return result
   }
 
+  /**
+   * Evaluates a logical AND expression by iterating through equality expressions
+   * and combining their results with the logical AND operator.
+   *
+   * @param ctx The context containing the logical AND expression.
+   * @return The boolean result of the logical AND operation.
+   */
   visitLogicalAndExpr (ctx) {
     let result = this.visit(ctx.equalityExpr(0))
     for (let i = 1; i < ctx.equalityExpr().length; i++) {
@@ -383,6 +524,13 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     return result
   }
 
+  /**
+   * Evaluates a logical OR expression by iterating through logical AND expressions
+   * and combining their results with the logical OR operator.
+   *
+   * @param ctx The context containing the logical OR expression.
+   * @return The boolean result of the logical OR operation.
+   */
   visitLogicalOrExpr (ctx) {
     let result = this.visit(ctx.logicalAndExpr(0))
     for (let i = 1; i < ctx.logicalAndExpr().length; i++) {
@@ -393,14 +541,34 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     return result
   }
 
+  /**
+   * Evaluates a general expression by delegating the evaluation to a logical OR expression.
+   *
+   * @param ctx The context containing the expression.
+   * @return The result of the expression evaluation.
+   */
   visitExpression (ctx) {
     return this.visit(ctx.logicalOrExpr())
   }
 
+  /**
+   * Processes an expression statement by evaluating the underlying expression.
+   *
+   * @param ctx The context containing the expression statement.
+   * @return The result of the expression evaluation.
+   */
   visitExpressionStatement (ctx) {
     return this.visit(ctx.expression())
   }
 
+  /**
+   * Evaluates a statement by determining its type and processing it accordingly.
+   * Supports multiple types of statements including variable declarations and expressions.
+   *
+   * @param ctx The context containing the statement.
+   * @return The result of the statement execution.
+   * @throws Error if the statement type is not supported.
+   */
   visitStatement (ctx) {
     const handlers = [
       { condition: () => ctx.letStatement(), handler: () => this.visit(ctx.letStatement()) },
@@ -421,6 +589,14 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     throw new Error(`Declaración de sentencia no soportada: ${ctx.getText()}`)
   }
 
+  /**
+   * Processes a `let` statement, binding a variable name to a value in the environment.
+   * Ensures the variable name is unique within the current scope.
+   *
+   * @param ctx The context containing the `let` statement.
+   * @return The value bound to the variable.
+   * @throws Error if the variable name or value is undefined, or if the variable already exists.
+   */
   visitLetStatement (ctx) {
     const name = ctx.identifier().getText()
     const value = this.visit(ctx.expression())
@@ -448,6 +624,14 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     return value
   }
 
+  /**
+   * Processes a `const` statement, binding a variable name to a constant value in the environment.
+   * Ensures the variable name is unique and cannot be reassigned.
+   *
+   * @param ctx The context containing the `const` statement.
+   * @return The constant value bound to the variable.
+   * @throws Error if the variable name already exists.
+   */
   visitConstStatement (ctx) {
     const name = ctx.identifier().getText()
     const value = this.visit(ctx.expression())
@@ -472,6 +656,13 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     return value
   }
 
+  /**
+   * Processes a `var` statement, binding a variable name to a value in the environment.
+   * Allows redeclaration of variables with the same name.
+   *
+   * @param ctx The context containing the `var` statement.
+   * @return The value bound to the variable.
+   */
   visitVarStatement (ctx) {
     const name = ctx.identifier().getText()
     const value = this.visit(ctx.expression())
@@ -490,6 +681,12 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     return value
   }
 
+  /**
+   * Processes a lambda expression and generates a callable function.
+   * 
+   * @param ctx - The context representing the lambda expression in the abstract syntax tree.
+   * @returns A function object that encapsulates the lambda's logic.
+   */
   visitLambdaExpr (ctx) {
     const funcID = this.generateFunctionID()
     const params = ctx.paramList()
@@ -524,7 +721,12 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     return func
   }
 
-  // Agrega este método a tu clase BiesCodeGeneratorVisitor
+  /**
+   * Processes a 'let-in' expression, managing variable declarations within a temporary scope.
+   * 
+   * @param ctx - The context representing the 'let-in' expression.
+   * @returns The result of evaluating the final expression within the 'in' block.
+   */
   visitLetInExpr (ctx) {
     const environmentBackup = { ...this.environment } // Guardar el entorno actual para restaurarlo después
     // Procesar todas las declaraciones dentro de let {...}
@@ -540,6 +742,12 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     return result
   }
 
+  /**
+   * Evaluates an 'if-then-else' expression by processing its condition and branches.
+   * 
+   * @param ctx - The context representing the 'if-then-else' expression.
+   * @returns The evaluated result from the appropriate branch.
+   */
   visitIfThenElseExpr (ctx) {
     const condition = this.visit(ctx.expression(0))
     // console.log(`Evaluando if con condición: ${condition}`)
@@ -554,6 +762,12 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     return result
   }
 
+  /**
+   * Evaluates a list expression and processes its elements.
+   * 
+   * @param ctx - The context representing the list expression.
+   * @returns An array containing the evaluated elements of the list.
+   */
   visitListExpr (ctx) {
     const elements = ctx.expression().map(expr => this.visit(expr))
     const top = this.facts[this.facts.length - 1]
@@ -578,6 +792,13 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     return elements
   }
 
+  /**
+   * Handles array access operations, ensuring bounds and type checks.
+   * 
+   * @param ctx - The context representing the array access operation.
+   * @returns The value at the specified array index.
+   * @throws An error if the accessed variable is not an array or the index is out of bounds.
+   */
   visitArrayAccess (ctx) {
     const arrayName = ctx.IDENTIFIER().getText()
     this.emit(`BLD 0 ${this.variables[arrayName]}`)
@@ -598,6 +819,11 @@ export default class BiesCodeGeneratorVisitor extends BiesVMVisitor {
     return value
   }
 
+  /**
+   * Writes the current set of instructions to a .basm file.
+   * 
+   * @param filename - The name of the file to write the instructions.
+   */
   writeToFile (filename) {
     const basmContent = this.instructions.join('\n')
     fs.writeFileSync(filename, basmContent, 'utf8')
